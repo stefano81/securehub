@@ -10,8 +10,8 @@ import java.security.Key;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
+@SuppressWarnings("serial")
 public class SocialParam implements Serializable {
-	private static final long serialVersionUID = 8457868642532709592L;
 	private Key AESKey;
 	private AsymmetricCipherKeyPair keyPair;
 	
