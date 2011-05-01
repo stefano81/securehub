@@ -23,6 +23,7 @@ import java.util.Arrays;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.crypto.AsymmetricBlockCipher;
@@ -51,8 +52,9 @@ public class CryptoSocial {
 		gen.nextBytes(key);
 		
 		// Inizializzazione parametri per chiavi HHVE
-//      curveGenerator= new TypeACurveGenerator(181, 603);
-//		curveParams= (CurveParams) curveGenerator.generate();
+		// curveGenerator= new TypeACurveGenerator(181, 603);
+		// curveParams= (CurveParams) curveGenerator.generate();
+		
 		curveParams = new CurveParams();
         curveParams.load("a_181_603.properties");
 		generator= new HVEIP08ParametersGenerator();
@@ -62,7 +64,12 @@ public class CryptoSocial {
         generatorKP.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), param));
      
         //Generazione chiavi
-		AESKey= new SecretKeySpec(key, "AES");
+		//AESKey= new SecretKeySpec(key, "AES");
+        
+        SecretKeyFactory.getInstance("AES", "BC").generateSecret(arg0)
+        
+        //AESKey = Cipher.getInstance("AES", "BC")
+        
 		keyPair= generatorKP.generateKeyPair();
         		
 		return new SocialParam(AESKey, keyPair);
