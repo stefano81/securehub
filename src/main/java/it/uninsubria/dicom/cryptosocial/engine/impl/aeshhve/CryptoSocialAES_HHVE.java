@@ -1,7 +1,7 @@
 package it.uninsubria.dicom.cryptosocial.engine.impl.aeshhve;
 
-import it.uninsubria.dicom.cryptosocial.EncryptedResource;
 import it.uninsubria.dicom.cryptosocial.engine.CryptoSocial;
+import it.uninsubria.dicom.cryptosocial.engine.EncryptedResource;
 import it.uninsubria.dicom.cryptosocial.engine.SocialParam;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08SearchKeyGenerator;

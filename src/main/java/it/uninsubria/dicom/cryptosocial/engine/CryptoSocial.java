@@ -1,6 +1,5 @@
 package it.uninsubria.dicom.cryptosocial.engine;
 
-import it.uninsubria.dicom.cryptosocial.EncryptedResource;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
