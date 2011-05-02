@@ -1,12 +1,18 @@
 package it.uninsubria.dicom.cryptosocial.engine.impl.aeshhve;
 
+import it.uninsubria.dicom.cryptosocial.EncryptedResource;
 import it.uninsubria.dicom.cryptosocial.engine.CryptoSocial;
 import it.uninsubria.dicom.cryptosocial.engine.SocialParam;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08SearchKeyGenerator;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08KeyPairGenerator;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08ParametersGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HHVEIP08DelegateSecretKeyGenerationParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HHVEIP08SearchKeyParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEAttributes;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08KeyGenerationParameters;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08Parameters;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.CurveParams;
 import it.unisa.dia.gas.plaf.jpbc.pairing.a.TypeACurveGenerator;
 
@@ -62,13 +68,13 @@ public class CryptoSocialAES_HHVE implements CryptoSocial {
         curveParams = (CurveParams) curveGenerator.generate();
 
         // generate HHVE parameters
-        HHVEIP08ParametersGenerator parametersGenerator = new HHVEIP08ParametersGenerator();
+        HVEIP08ParametersGenerator parametersGenerator = new HVEIP08ParametersGenerator();
         parametersGenerator.init(curveParams, l);
-        HHVEIP08Parameters hhveip08Parameters = parametersGenerator.generateParameters();
+        HVEIP08Parameters hhveip08Parameters = parametersGenerator.generateParameters();
 
         // generate keys
-        HHVEIP08KeyPairGenerator keyPairGenerator = new HHVEIP08KeyPairGenerator();
-        keyPairGenerator.init(new HHVEIP08KeyGenerationParameters(new SecureRandom(), hhveip08Parameters));
+        HVEIP08KeyPairGenerator keyPairGenerator = new HVEIP08KeyPairGenerator();
+        keyPairGenerator.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), hhveip08Parameters));
 
         AsymmetricCipherKeyPair asymmetricCipherKeyPair = keyPairGenerator.generateKeyPair();
 
@@ -107,7 +113,7 @@ public class CryptoSocialAES_HHVE implements CryptoSocial {
         // Encrypt the secret key with HHVE
         // encrypt the attribute
         byte[] attrs = HVEAttributes.attributesToByteArray(
-                ((HHVEIP08PublicKeyParameters) sp.getAsymmetricKeyPair().getPublic()).getParameters(),
+                ((HVEIP08PublicKeyParameters) sp.getAsymmetricKeyPair().getPublic()).getParameters(),
                 x
         );
         attributesEngine.init(true, sp.getAsymmetricKeyPair().getPublic());
@@ -164,7 +170,7 @@ public class CryptoSocialAES_HHVE implements CryptoSocial {
 
     @Override
     public SocialParam delegate(SocialParam masterKeys, int[] y) {
-        HHVEIP08PublicKeyParameters publicKey = (HHVEIP08PublicKeyParameters) masterKeys.getAsymmetricKeyPair().getPublic();
+        HVEIP08PublicKeyParameters publicKey = (HVEIP08PublicKeyParameters) masterKeys.getAsymmetricKeyPair().getPublic();
         HHVEIP08SearchKeyParameters searchKey = (HHVEIP08SearchKeyParameters) masterKeys.getAsymmetricKeyPair().getPrivate();
 
         HHVEIP08SearchKeyGenerator generator = new HHVEIP08SearchKeyGenerator();

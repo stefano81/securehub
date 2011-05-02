@@ -116,7 +116,8 @@ public class CryptoSocial {
 				while (rs.next()) {
 					// extract key
 					// try key
-				
+					if (false)
+						break;
 				}
 
 				if (decrypted) {
