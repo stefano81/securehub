@@ -8,12 +8,11 @@ import it.unisa.dia.gas.plaf.jpbc.pairing.CurveParams;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.URL;
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -23,7 +22,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -34,35 +40,39 @@ import javax.ws.rs.Produces;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
-@Path("cryptosocial/")
-public class CryptoSocial {
+import com.restfb.DefaultFacebookClient;
+import com.restfb.FacebookClient;
+
+@SuppressWarnings("serial")
+public class CryptoSocial extends HttpServlet {
 	private final Properties	properties;
-	private final Properties	connectionProperties;
 	private final String		dbURL;
 	
 	private final HVEIP08Parameters	parameters;
 	private final HVEIP08KeyPairGenerator	keyPairGenerator;
 	
+	private final Logger logger = Logger.getLogger(CryptoSocial.class.toString());
 
 	public CryptoSocial() throws IOException, ClassNotFoundException {
+		logger.log(Level.INFO,"init");
 
 		properties = new Properties();
-		properties.load(this.getClass().getClassLoader().getResourceAsStream(
-				"it/uninsubria/dicom/cryptosocial/config.properties"));
+		properties.load(this.getClass().getClassLoader().getResourceAsStream("it/uninsubria/dicom/cryptosocial/config.properties"));
 
 		Class.forName(properties.getProperty("driver"));
-
-		connectionProperties = new Properties();
-		connectionProperties.put("user", properties.get("username"));
-		connectionProperties.put("password", properties.get("password"));
-		connectionProperties.put("ssl", true);
+		
+		logger.info(properties.getProperty("username"));
+		logger.info(properties.getProperty("password"));
 
 		dbURL = properties.getProperty("URL") + "/"
 				+ properties.getProperty("DBName");
 		
-		InputStream is = this.getClass().getClassLoader().getResourceAsStream(properties.getProperty("parametersPath"));
+		URL url = this.getClass().getClassLoader().getResource(properties.getProperty("parametersPath"));
+		//InputStream is = 
 		
-		if (null == is) {
+		if (null == url) {
+			logger.log(Level.INFO, "not existing");
+			
 			// generate parameters
 			CurveParams curveParams = new CurveParams();
 			curveParams.load(this.getClass().getClassLoader().getResourceAsStream(properties.getProperty("curvePath")));
@@ -72,11 +82,17 @@ public class CryptoSocial {
 		
 			parameters = generator.generateParameters();
 			
-			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(properties.getProperty("parametersPath")));
-			oos.writeObject(parameters);
+			/* File parameterFile = new File( + properties.getProperty("parametersPath"));
+			
+			logger.info(parameterFile.getAbsoluteFile());
+			
+			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(parameterFile));
+			oos.writeObject(parameters);*/
 			
 		} else {
-			ObjectInputStream ois = new ObjectInputStream(is);
+			logger.log(Level.INFO, "existing");
+			
+			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(url.getFile()));
 			
 			parameters = (HVEIP08Parameters) ois.readObject();
 		}
@@ -85,57 +101,53 @@ public class CryptoSocial {
 		keyPairGenerator.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), parameters));
 	}
 
-	@POST
+	@GET
 	@Path("user/{uid}")
-	@Consumes("multipart/form-data")
-	public void registerUser(@PathParam("uid") String uid, Map<String, String> userData) {
-		final String query ="INSERT INTO users (uid, public, private) VALUE (?, ?, ?)";
+	public void registerUser(@PathParam("uid") String uid) {
+		final String query ="INSERT INTO users (uid, public_key, private_key) VALUES (?, ?, ?)";
+		
+		logger.log(Level.INFO, "user/"+uid);
 		
 		// generate user keys
 		AsymmetricCipherKeyPair keys = keyPairGenerator.generateKeyPair();
+		Connection connection = null;
 		
 		try {
-			ByteArrayInputStream baisPrivate = convertKeysToInputStream(keys.getPrivate());
-			ByteArrayInputStream baisPublic = convertKeysToInputStream(keys.getPublic());
-			
-			Connection connection = connectToDB();
+			connection = connectToDB();
 			
 			PreparedStatement ps = connection.prepareStatement(query);
 			
 			ps.setString(1, uid);
-			ps.setBinaryStream(2, baisPublic, baisPublic.available());
-			ps.setBinaryStream(3, baisPrivate, baisPrivate.available());
+			ps.setBytes(2, convertKeysToBytes(keys.getPublic()));
+			ps.setBytes(3, convertKeysToBytes(keys.getPrivate()));
 			
-			if (ps.execute()) {
-				// TODO
-			} else {
-				// TODO
-			}
+			logger.log(Level.INFO, ps.toString());
+			
+			ps.executeUpdate();
+			
+			
+			
+			FacebookClient fbClient = new DefaultFacebookClient(properties.getProperty("token"));
+			
+			connection.close();
 		} catch (SQLException e) {
 			e.printStackTrace(); // TODO
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (NullPointerException e) {
+			e.printStackTrace();
 		}
 	}
 
-	private ByteArrayInputStream convertKeysToInputStream(CipherParameters cipherParameters) throws IOException {
-		ByteArrayOutputStream baosPrivate = new ByteArrayOutputStream();
-		ObjectOutputStream oosPrivate = new ObjectOutputStream(baosPrivate);
-		oosPrivate.writeObject(cipherParameters);
-		oosPrivate.close();
-		ByteArrayInputStream baisPrivate = new ByteArrayInputStream(baosPrivate.toByteArray());
-		return baisPrivate;
-	}
-	
-	@POST
-	@Path("user/{uid}/{friend}")
-	public void addFriend(@PathParam("uid") String uid, @PathParam("friend") String friend) {
-		// TODO
-		// check if registered
-		// recover key for uid
-		// generate keys for friend
-		// store keys
+	private byte[] convertKeysToBytes(CipherParameters cipherParameters) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(baos);
+		
+		oos.writeObject(cipherParameters);
+		oos.close();
+
+		return baos.toByteArray();
 	}
 	
 	@GET
@@ -218,8 +230,8 @@ public class CryptoSocial {
 
 	@POST
 	@Path("resource/{uid}")
-	public void publishResource(@PathParam("uid") String uid,
-			@PathParam("policy") String policy) {
+	@Consumes("multipart/form-data")
+	public void publishResource(@PathParam("uid") String uid, Map<String, String> data) {
 		// TODO
 	}
 
@@ -227,13 +239,30 @@ public class CryptoSocial {
 		Connection connection = null;
 
 		try {
-			connection = DriverManager.getConnection(dbURL,
-					connectionProperties);
+			connection = DriverManager.getConnection(dbURL, properties.getProperty("username"), properties.getProperty("password"));
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 		return connection;
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		super.doGet(arg0, arg1);
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest arg0, HttpServletResponse arg1) throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		super.doPost(arg0, arg1);
+	}
+
+	@Override
+	public void init(ServletConfig arg0) throws ServletException {
+		// TODO Auto-generated method stub
+		super.init(arg0);
 	}
 }
