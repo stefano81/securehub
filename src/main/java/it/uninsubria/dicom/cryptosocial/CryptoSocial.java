@@ -74,6 +74,7 @@ public class CryptoSocial {
 	private final KeyGenerator				symmetricKeyGenerator;
 	
 	private final ConnectionPool			connectionPool;
+	private final KeyGeneration				keyGeneration;
 
 	private final Logger					logger	= Logger.getLogger(CryptoSocial.class.toString());
 
@@ -86,6 +87,7 @@ public class CryptoSocial {
 		Security.addProvider(new BouncyCastleProvider());
 
 		connectionPool = DatabasePoolImplPostgres.getInstance();
+		keyGeneration = KeyGenerationImpl.getInstance();
 
 		URL url = this.getClass().getClassLoader().getResource(
 				properties.getProperty("parametersPath"));
@@ -188,6 +190,7 @@ public class CryptoSocial {
 						insertFriendshipStatement.executeUpdate();
 						
 						// insert u2, u1 for key propagation
+						keyGeneration.propagate(friend.getId(), uid);
 					}
 				}
 			}
@@ -205,7 +208,7 @@ public class CryptoSocial {
 		}
 	}
 
-	private byte[] convertKeysToBytes(CipherParameters cipherParameters) throws IOException {
+	protected static byte[] convertKeysToBytes(CipherParameters cipherParameters) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ObjectOutputStream oos = new ObjectOutputStream(baos);
 
@@ -380,7 +383,8 @@ public class CryptoSocial {
 	@Path("resource/upload")
 	public void publishResource(@Context HttpServletRequest req) throws Exception {
 		final String insertResourceQuery = "INSERT INTO resources (resource, privatekey, name, owner) VALUES (?, ?, ?, ?)";
-		final String ownerKeysQuery = "SELCT private_key, public_key FROM users WHERE uid = ?";
+		final String ownerKeysQuery = "SELECT private_key, public_key FROM users WHERE uid = ?";
+		final String ownerFriendQuery = "SELECT user2 FROM friendships WHERE user1 = ?"; 
 		
 		FileItemFactory factory = new DiskFileItemFactory();
 		ServletFileUpload upload = new ServletFileUpload(factory);
@@ -444,7 +448,20 @@ public class CryptoSocial {
 				insertResourceStatement.setString(3, name);
 				insertResourceStatement.setString(4, uid);
 				
-				insertResourceStatement.executeUpdate();
+				if (1 == insertResourceStatement.executeUpdate()) {
+					ResultSet resourceID = insertResourceStatement.getGeneratedKeys();
+					PreparedStatement ownerFriendsStatement = connection.prepareStatement(ownerFriendQuery);
+					
+					ownerFriendsStatement.setString(1, uid);
+					
+					ResultSet ownerFriendsRS = ownerFriendsStatement.executeQuery();
+					
+					if (resourceID.next()) {
+						while (ownerFriendsRS.next()) {
+							keyGeneration.generate(uid, ownerFriendsRS.getString("user2"), policy);
+						}
+					}
+				}
 			} else {
 				throw new WebApplicationException();
 			}
