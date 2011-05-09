@@ -1,5 +1,8 @@
 package it.uninsubria.dicom.cryptosocial;
 
+import it.uninsubria.dicom.cryptosocial.engine.CryptoProvider;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 
@@ -12,12 +15,21 @@ import javax.servlet.http.HttpServletResponse;
 @SuppressWarnings("serial")
 public class UsersManagement extends HttpServlet {
 	private static Logger 	logger = Logger.getLogger(UsersManagement.class.toString());
+	
 	private ConnectionPool	dbPool;
+	private CryptoProvider crypto; 
 	
 
 	@Override
 	protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		File f = new File("owls/diagnosi.owl");
 		
+		if (f.exists()) {
+			File bkp = new File("owls/bkps/diagnosi.2011.05.06.15.47.22.owl");
+			f.renameTo(bkp);
+			
+			f = new File("owls/diagnosi.owl");
+		}
 	}
 
 	@Override
@@ -41,6 +53,6 @@ public class UsersManagement extends HttpServlet {
 		super.init(config);
 		
 		dbPool = DatabasePoolImplPostgres.getInstance();
+		crypto = CryptoProvider.getInstance();
 	}
-
 }

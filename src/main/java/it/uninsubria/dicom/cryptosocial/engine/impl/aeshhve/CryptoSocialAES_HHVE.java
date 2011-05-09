@@ -34,6 +34,7 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 
+import org.bouncycastle.crypto.AsymmetricBlockCipher;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -49,8 +50,9 @@ public class CryptoSocialAES_HHVE implements CryptoSocial {
 
     private CurveParams curveParams;
     private HHVEIP08AttributesEngine attributesEngine;
-
-    private Cipher symmetricCipher;
+	private Cipher	symmetricCipher;
+    
+    //private Cipher symmetricCipher;
 
     public CryptoSocialAES_HHVE() {
         Security.addProvider(new BouncyCastleProvider());
@@ -77,12 +79,12 @@ public class CryptoSocialAES_HHVE implements CryptoSocial {
         keyPairGenerator.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), hhveip08Parameters));
 
         AsymmetricCipherKeyPair asymmetricCipherKeyPair = keyPairGenerator.generateKeyPair();
-
-        try {
+        
+        /*try {
             symmetricCipher = Cipher.getInstance(SYMMETRIC, PROVIDER);
         } catch (NoSuchPaddingException e) {
             e.printStackTrace();  // TODO Automatically created catch statement body
-        }
+        }*/
 
         attributesEngine = new HHVEIP08AttributesEngine();
 

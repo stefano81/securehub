@@ -2,10 +2,10 @@
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
   <display-name>DarwinProxy</display-name>
 
-  <!-- <context-param>
-      <param-name>resteasy.scan</param-name>
+	<context-param>
+      <param-name>resteasy.scan.resources</param-name>
       <param-value>true</param-value>
-   </context-param> -->
+   </context-param>
 
    <!-- if you are using Spring, Seam or EJB as your component model, remove the ResourceMethodSecurityInterceptor -->
    <!-- <context-param>
@@ -13,7 +13,7 @@
       <param-value>
          org.jboss.resteasy.core.ResourceMethodSecurityInterceptor
       </param-value>
-      </context-param>
+   </context-param>-->
 
    <listener>
       <listener-class>org.jboss.resteasy.plugins.server.servlet.ResteasyBootstrap</listener-class>
@@ -22,12 +22,13 @@
    <servlet>
       <servlet-name>Resteasy</servlet-name>
       <servlet-class>org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher</servlet-class>
+      <load-on-startup>1</load-on-startup>
    </servlet>
 
    <servlet-mapping>
       <servlet-name>Resteasy</servlet-name>
       <url-pattern>/cryptosocial/*</url-pattern>
-   </servlet-mapping>-->
+   </servlet-mapping>
    
    <servlet>
    	<servlet-name>UsersMNG</servlet-name>
