@@ -1,5 +1,8 @@
 package it.uninsubria.dicom.cryptosocial.server;
 
+import it.uninsubria.dicom.cryptosocial.shared.ClientDatabase;
+import it.uninsubria.dicom.cryptosocial.shared.ConnectionPoolException;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,7 +12,7 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.logging.Logger;
 
-public class DatabasePoolImplPostgres implements ConnectionPool {
+public class DatabasePoolImplPostgres implements ClientDatabase {
 	private static DatabasePoolImplPostgres databasePool;
 	private static Logger	logger = Logger.getLogger(DatabasePoolImplPostgres.class.toString());
 	
@@ -35,7 +38,7 @@ public class DatabasePoolImplPostgres implements ConnectionPool {
 				+ properties.getProperty("DBName");
 	}
 	
-	public static synchronized ConnectionPool getInstance() {
+	public static synchronized ClientDatabase getInstance() {
 		if (null == databasePool)
 			try {
 				databasePool = new DatabasePoolImplPostgres();

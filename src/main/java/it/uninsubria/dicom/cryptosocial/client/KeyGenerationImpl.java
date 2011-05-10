@@ -1,8 +1,8 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
-import it.uninsubria.dicom.cryptosocial.server.ConnectionPool;
-import it.uninsubria.dicom.cryptosocial.server.ConnectionPoolException;
 import it.uninsubria.dicom.cryptosocial.server.DatabasePoolImplPostgres;
+import it.uninsubria.dicom.cryptosocial.shared.ClientDatabase;
+import it.uninsubria.dicom.cryptosocial.shared.ConnectionPoolException;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08SearchKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SearchKeyGenerationParameters;
@@ -26,7 +26,7 @@ import org.bouncycastle.crypto.CipherParameters;
 public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	private static KeyGenerationImpl INSTANCE;
 	private static final Logger logger = Logger.getLogger(KeyGenerationImpl.class.toString()); 
-	private final ConnectionPool connectionPool;
+	private final ClientDatabase connectionPool;
 	
 	public static long SLEEPTIME = 5000l;
 	

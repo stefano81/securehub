@@ -1,8 +1,9 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
-import it.uninsubria.dicom.cryptosocial.server.ConnectionPool;
-import it.uninsubria.dicom.cryptosocial.server.ConnectionPoolException;
 import it.uninsubria.dicom.cryptosocial.server.DatabasePoolImplPostgres;
+import it.uninsubria.dicom.cryptosocial.shared.ClientDatabase;
+import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
+import it.uninsubria.dicom.cryptosocial.shared.ConnectionPoolException;
 import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08Engine;
@@ -58,6 +59,7 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.bouncycastle.crypto.AsymmetricBlockCipher;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
+import org.bouncycastle.crypto.AsymmetricCipherKeyPairGenerator;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.paddings.ZeroBytePadding;
@@ -69,48 +71,52 @@ import com.restfb.types.User;
 
 @Path("cryptosocial/")
 public class CryptoSocial {
-	private final Properties				properties;
-
-	private final HVEIP08Parameters			parameters;
-	private final HVEIP08KeyPairGenerator	keyPairGenerator;
+	private CommonProperties				properties;
 	
-	private final KeyGenerator				symmetricKeyGenerator;
+	private HVEIP08KeyPairGenerator	keyPairGenerator;
 	
-	private final ConnectionPool			connectionPool;
-	private final KeyGeneration				keyGeneration;
+	private KeyGenerator				symmetricKeyGenerator;
+	
+	private ClientDatabase			database;
+	private KeyGeneration				keyGeneration;
 
-	private final Logger					logger	= Logger.getLogger(CryptoSocial.class.toString());
+	private final Logger				logger	= Logger.getLogger(CryptoSocial.class.toString());
 
+	protected CryptoSocial(ClientDatabase database, KeyGenerator symmetricKeyGenerator, KeyGeneration keyGeneration, HVEIP08KeyPairGenerator keyPairGenerator) {
+		init(database, symmetricKeyGenerator, keyPairGenerator, keyGeneration);
+	}
+	
 	public CryptoSocial() throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
 		logger.info("init");
-		properties = new Properties();
-		properties.load(this.getClass().getClassLoader().getResourceAsStream(
-				"it/uninsubria/dicom/cryptosocial/config.properties"));
 		
-		Security.addProvider(new BouncyCastleProvider());
+		properties = CommonProperties.getInstance();
 
-		connectionPool = DatabasePoolImplPostgres.getInstance();
-		keyGeneration = KeyGenerationImpl.getInstance();
+		ClientDatabase database = DatabasePoolImplPostgres.getInstance();
+		KeyGeneration keyGeneration = KeyGenerationImpl.getInstance();
 
-		URL url = this.getClass().getClassLoader().getResource(
-				properties.getProperty("parametersPath"));
-
+		
+		
+		KeyGenerator symmetricKeyGenerator = KeyGenerator.getInstance(properties.getSymmetricAlgorithm());
+		symmetricKeyGenerator.init(properties.getKeySize());
+		
+		URL url = properties.getParametersPath();
+		
+		HVEIP08Parameters parameters = null;
+		
 		if (null == url) {
 			logger.info("not existing");
 
 			// generate parameters
 			CurveParams curveParams = new CurveParams();
-			curveParams.load(this.getClass().getClassLoader().getResourceAsStream(
-					properties.getProperty("curvePath")));
+			curveParams.load(properties.getCurveParams());
 
 			HVEIP08ParametersGenerator generator = new HVEIP08ParametersGenerator();
-			generator.init(curveParams,
-					Integer.parseInt(properties.getProperty("length")));
+			generator.init(curveParams, properties.getLength());
 
 			parameters = generator.generateParameters();
 
 			File parameterFile = new File(new File(this.getClass().getClassLoader().getResource(
-					"/").getFile() + "../").getAbsolutePath() + properties.getProperty("parametersPath"));
+					"/").getFile() + "../").getAbsolutePath() + properties.getParametersPath().getFile());
 
 			logger.info(parameterFile.getAbsolutePath());
 
@@ -125,11 +131,17 @@ public class CryptoSocial {
 			parameters = (HVEIP08Parameters) ois.readObject();
 		}
 
-		keyPairGenerator = new HVEIP08KeyPairGenerator();
+		HVEIP08KeyPairGenerator keyPairGenerator = new HVEIP08KeyPairGenerator();
 		keyPairGenerator.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), parameters));
 		
-		symmetricKeyGenerator = KeyGenerator.getInstance(properties.getProperty("symmetricAlgorithm"));//, properties.getProperty("provider"));
-		symmetricKeyGenerator.init(Integer.parseInt(properties.getProperty("keySize")));
+		init(database, symmetricKeyGenerator, keyPairGenerator, keyGeneration);
+	}
+
+	private void init(ClientDatabase database, KeyGenerator symmetricKeyGenerator, HVEIP08KeyPairGenerator keyPairGenerator, KeyGeneration keyGeneration) {
+		this.database = database;
+		this.symmetricKeyGenerator = symmetricKeyGenerator;
+		this.keyGeneration = keyGeneration;
+		this.keyPairGenerator = keyPairGenerator;
 	}
 
 	@GET
@@ -147,7 +159,7 @@ public class CryptoSocial {
 		Connection connection = null;
 
 		try {
-			connection = connectionPool.getConnection();
+			connection = database.getConnection();
 
 			PreparedStatement updateKeysStatement = connection.prepareStatement(updateKeysQuery);
 
@@ -229,7 +241,7 @@ public class CryptoSocial {
 		final String getResourceQuery = "SELECT resource, privatekey FROM resources WHERE id = ?";
 
 		try {
-			Connection connection = connectionPool.getConnection();
+			Connection connection = database.getConnection();
 			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
 			
 			getResourceStatement.setInt(1, resourceId);
@@ -262,7 +274,7 @@ public class CryptoSocial {
 					//SecretKey symmetricKey = (SecretKey) symmetricKeyOis.readObject();
 					
 					SecretKey symmetricKey = decryptSymmetricKey(getResourceRS.getBytes("privatekey"), searchKey);
-					Cipher cipher = Cipher.getInstance(properties.getProperty("symmetricAlgorithm"));//, properties.getProperty("provider"));
+					Cipher cipher = Cipher.getInstance(properties.getSymmetricAlgorithm());
 					cipher.init(Cipher.DECRYPT_MODE, symmetricKey);
 					
 					ByteArrayOutputStream resource = new ByteArrayOutputStream();
@@ -347,7 +359,7 @@ public class CryptoSocial {
 		StringBuffer resources = new StringBuffer("[\n");
 		
 		try {
-			connection = connectionPool.getConnection();
+			connection = database.getConnection();
 
 			Statement statement = connection.createStatement();
 
@@ -422,14 +434,14 @@ public class CryptoSocial {
 		}
 		
 		if (uid != null) {
-			Connection connection = connectionPool.getConnection();
+			Connection connection = database.getConnection();
 			
 			PreparedStatement ownerKeysStatement = connection.prepareStatement(ownerKeysQuery);
 			ResultSet ownerKeysRS = ownerKeysStatement.executeQuery();
 			
 			if (ownerKeysRS.next()) {
 				SecretKey symmetricKey = symmetricKeyGenerator.generateKey();
-				Cipher cipher = Cipher.getInstance(properties.getProperty("symmetricAlgorithm"));//, properties.getProperty("provider"));
+				Cipher cipher = Cipher.getInstance(properties.getSymmetricAlgorithm());
 				cipher.init(Cipher.ENCRYPT_MODE, symmetricKey);
 				
 				ByteArrayOutputStream encryptedResource = new ByteArrayOutputStream();
@@ -494,7 +506,7 @@ public class CryptoSocial {
 	}
 
 	private int[] parsePolicy(String string) {
-		int[] policy = new int[Integer.parseInt(properties.getProperty("length"))];
+		int[] policy = new int[properties.getLength()];
 		
 		int i = 0;
 		

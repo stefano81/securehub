@@ -1,7 +1,7 @@
-package it.uninsubria.dicom.cryptosocial.server;
+package it.uninsubria.dicom.cryptosocial.shared;
 
 import java.sql.Connection;
 
-public interface ConnectionPool {
+public interface ClientDatabase {
 	public abstract Connection getConnection() throws ConnectionPoolException;
 }
