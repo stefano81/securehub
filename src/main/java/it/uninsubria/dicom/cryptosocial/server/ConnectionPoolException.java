@@ -1,4 +1,4 @@
-package it.uninsubria.dicom.cryptosocial;
+package it.uninsubria.dicom.cryptosocial.server;
 
 @SuppressWarnings("serial")
 public class ConnectionPoolException extends Exception {

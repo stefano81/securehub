@@ -1,5 +1,8 @@
-package it.uninsubria.dicom.cryptosocial;
+package it.uninsubria.dicom.cryptosocial.client;
 
+import it.uninsubria.dicom.cryptosocial.server.ConnectionPool;
+import it.uninsubria.dicom.cryptosocial.server.ConnectionPoolException;
+import it.uninsubria.dicom.cryptosocial.server.DatabasePoolImplPostgres;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08SearchKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SearchKeyGenerationParameters;

@@ -1,5 +1,8 @@
-package it.uninsubria.dicom.cryptosocial;
+package it.uninsubria.dicom.cryptosocial.client;
 
+import it.uninsubria.dicom.cryptosocial.server.ConnectionPool;
+import it.uninsubria.dicom.cryptosocial.server.ConnectionPoolException;
+import it.uninsubria.dicom.cryptosocial.server.DatabasePoolImplPostgres;
 import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08Engine;
