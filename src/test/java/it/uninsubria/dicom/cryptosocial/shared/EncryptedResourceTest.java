@@ -48,7 +48,8 @@ public class EncryptedResourceTest {
 
 	@Test
 	public void testGetKey() {
-		fail("Not yet implemented");
+		assertThat(key1.length, is(equalTo(resource.getKey().length)));
+		assertThat(key1, is(equalTo(resource.getKey())));
 	}
 
 }

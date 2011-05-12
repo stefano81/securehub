@@ -15,12 +15,12 @@ public final class CommonProperties implements DatabaseProperties, ClientPropert
 	
 	private Properties properties;
 	
-	private CommonProperties() {
+	private CommonProperties(String configurationPath) {
 		Security.addProvider(new BouncyCastleProvider());
 
 		properties = new Properties();
 		try {
-			properties.load(this.getClass().getClassLoader().getResourceAsStream("it/uninsubria/dicom/cryptosocial/config.properties"));
+			properties.load(this.getClass().getClassLoader().getResourceAsStream(configurationPath));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -28,8 +28,10 @@ public final class CommonProperties implements DatabaseProperties, ClientPropert
 	}
 
 	public static CommonProperties getInstance() {
-		if (null == instance)
-			instance = new CommonProperties();
+		if (null == instance) {
+			String configurationPath = "it/uninsubria/dicom/cryptosocial/config.properties";
+			instance = new CommonProperties(configurationPath);
+		}
 		
 		return instance;
 	}
