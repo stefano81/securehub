@@ -1,6 +1,9 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
+import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
+import it.uninsubria.dicom.cryptosocial.server.ResourceStorerFB;
 import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
+import it.uninsubria.dicom.cryptosocial.shared.CriptoInterfaceFB;
 import it.uninsubria.dicom.cryptosocial.shared.EncryptedResource;
 import it.uninsubria.dicom.cryptosocial.shared.PostgresDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
@@ -8,27 +11,18 @@ import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08Engine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08KeyPairGenerator;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08ParametersGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08EncryptionParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08KeyGenerationParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08Parameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameters;
-import it.unisa.dia.gas.plaf.jpbc.pairing.CurveParams;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
@@ -73,66 +67,26 @@ public class CryptoSocial {
 	private ClientDatabase			database;
 	private KeyGeneration			keyGeneration;
 
+	private ResourceRepository	repository;
+	
 	private final Logger			logger	= Logger.getLogger(CryptoSocial.class.toString());
 
-	protected CryptoSocial(ClientDatabase database, KeyGenerator symmetricKeyGenerator, KeyGeneration keyGeneration, HVEIP08KeyPairGenerator keyPairGenerator) {
-		init(database, symmetricKeyGenerator, keyPairGenerator, keyGeneration);
-	}
-
 	public CryptoSocial() throws NoSuchAlgorithmException, FileNotFoundException, IOException, ClassNotFoundException {
-		logger.info("init");
-
-		properties = CommonProperties.getInstance();
-
-		ClientDatabase database = PostgresDatabase.getClientInstance();
-		KeyGeneration keyGeneration = new KeyGenerationImpl(database);
-
-		KeyGenerator symmetricKeyGenerator = KeyGenerator.getInstance(properties.getSymmetricAlgorithm());
-		symmetricKeyGenerator.init(properties.getKeySize());
-
-		URL url = properties.getParametersPath();
-
-		HVEIP08Parameters parameters = null;
-
-		if (null == url) {
-			logger.info("not existing");
-
-			// generate parameters
-			CurveParams curveParams = new CurveParams();
-			curveParams.load(properties.getCurveParams());
-
-			HVEIP08ParametersGenerator generator = new HVEIP08ParametersGenerator();
-			generator.init(curveParams, properties.getLength());
-
-			parameters = generator.generateParameters();
-
-			File parameterFile = new File(new File(this.getClass().getClassLoader().getResource(
-					"/").getFile() + "../").getAbsolutePath() + properties.getParametersPath().getFile());
-
-			logger.info(parameterFile.getAbsolutePath());
-
-			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(parameterFile));
-			oos.writeObject(parameters);
-
-		} else {
-			logger.info("existing");
-
-			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(url.getFile()));
-
-			parameters = (HVEIP08Parameters) ois.readObject();
-		}
-
-		HVEIP08KeyPairGenerator keyPairGenerator = new HVEIP08KeyPairGenerator();
-		keyPairGenerator.init(new HVEIP08KeyGenerationParameters(new SecureRandom(), parameters));
-
-		init(database, symmetricKeyGenerator, keyPairGenerator, keyGeneration);
+		this(CommonProperties.getInstance(),
+				PostgresDatabase.getClientInstance(),
+				 CriptoInterfaceFB.getInstance().getSymmetricKeyGenerator(),
+				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance()),
+				 CriptoInterfaceFB.getInstance().getKeyPairGenerator(),
+				 ResourceStorerFB.getInstance());
 	}
-
-	private void init(ClientDatabase database, KeyGenerator symmetricKeyGenerator, HVEIP08KeyPairGenerator keyPairGenerator, KeyGeneration keyGeneration) {
+	
+	protected CryptoSocial(ClientProperties properties, ClientDatabase database, KeyGenerator symmetricKeyGenerator, KeyGeneration keyGeneration, HVEIP08KeyPairGenerator keyPairGenerator, ResourceRepository repository) {
+		this.properties = properties;
 		this.database = database;
 		this.symmetricKeyGenerator = symmetricKeyGenerator;
 		this.keyGeneration = keyGeneration;
 		this.keyPairGenerator = keyPairGenerator;
+		this.repository = repository;
 	}
 
 	@GET
@@ -166,11 +120,11 @@ public class CryptoSocial {
 	}
 
 	@GET
-	@Path("resource/get/{rid}")
+	@Path("resource/{rid}")
 	@Produces("application/octet-stream")
 	public byte[] retrieveResource(@PathParam("rid") Integer resourceId, @QueryParam("uid") String uid) {
 
-		EncryptedResource encryptedResource = database.getResource(resourceId);
+		EncryptedResource encryptedResource = (EncryptedResource) repository.getResource(new ResourceID(resourceId));
 		
 		if (null != encryptedResource) {
 			// keys
@@ -265,13 +219,13 @@ public class CryptoSocial {
 	}
 
 	@GET
-	@Path("resource/search")
+	@Path("resource")
 	@Produces("application/json")
 	public String searchResources(@QueryParam("query") String name) {
 
 		StringBuffer resourcesJSON = new StringBuffer("[\n");
 
-		Iterator<ResourceID> resources = database.searchResources(name);
+		Iterator<ResourceID> resources = repository.searchResources(name);
 	
 		if (resources.hasNext()) {
 			ResourceID resource = resources.next();
@@ -301,7 +255,7 @@ public class CryptoSocial {
 	}
 
 	@POST
-	@Path("resource/upload")
+	@Path("resource")
 	public void publishResource(@Context HttpServletRequest req) throws Exception {
 
 		FileItemFactory factory = new DiskFileItemFactory();
@@ -314,7 +268,9 @@ public class CryptoSocial {
 		ByteArrayOutputStream resource = new ByteArrayOutputStream();
 
 		String uid = null;
-		int[] policy = null; // TMCH
+		int[] policy = {1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1,
+				1,1,1,1,1,1,1,1,1,1}; // TMCH
 
 		for (FileItem item : items) {
 			if (item.isFormField()) {
@@ -353,7 +309,8 @@ public class CryptoSocial {
 
 				byte[] encryptedSymmetricKeyBytes = encryptSymmetricKey(convertKeysToBytes(symmetricKey), publicKey, policy);
 
-				ResourceID rid = database.insertResource(uid, name, encryptedResource.toByteArray(), encryptedSymmetricKeyBytes);  
+				EncryptedResource res = new EncryptedResource(encryptedResource.toByteArray(), encryptedSymmetricKeyBytes);
+				ResourceID rid = repository.storeResource(uid, name, res);  
 				
 				if (null != rid) {
 					Iterator<String> friends = database.getUserFriends(uid);
@@ -376,6 +333,9 @@ public class CryptoSocial {
 		try {
 			AsymmetricBlockCipher engine = new MultiBlockAsymmetricBlockCipher(new HHVEIP08Engine(), new ZeroBytePadding());
 
+			logger.info("PublicKey is null: " + (publicKey == null));
+			logger.info("Policy is null: " + (null == policy));
+			
 			engine.init(
 					true,
 					new HVEIP08EncryptionParameters((HVEIP08PublicKeyParameters) publicKey, policy));
@@ -395,10 +355,14 @@ public class CryptoSocial {
 
 		int i = 0;
 
-		String[] rules = string.split("\\s");
+		String[] rules = string.split(",");
 
 		for (; i < policy.length && i < rules.length; i++) {
-			policy[i] = Integer.parseInt(rules[i]);
+			try {
+				policy[i] = Integer.parseInt(rules[i]);
+			} catch(NumberFormatException e) {
+				policy[i] = 0;
+			}
 		}
 
 		if (i < policy.length) {

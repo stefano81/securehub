@@ -30,26 +30,6 @@
       <url-pattern>/cryptosocial/*</url-pattern>
    </servlet-mapping>
    
-   <servlet>
-   	<servlet-name>UsersMNG</servlet-name>
-   	<servlet-class>it.uninsubria.dicom.cryptosocial.UsersManagement</servlet-class>
-   	<load-on-startup>1</load-on-startup>
-   </servlet>
-   <servlet-mapping>
-   	<servlet-name>UsersMNG</servlet-name>
-   	<url-pattern>/user/*</url-pattern>
-   </servlet-mapping>
-   
-   <servlet>
-   	<servlet-name>ResourcesMNG</servlet-name>
-   	<servlet-class>it.uninsubria.dicom.cryptosocial.ResourcesManagement</servlet-class>
-   	<load-on-startup>1</load-on-startup>
-   </servlet>
-   <servlet-mapping>
-   	<servlet-name>ResourcesMNG</servlet-name>
-   	<url-pattern>/resources/*</url-pattern>
-   </servlet-mapping>
-   
    <welcome-file-list>
    	<welcome-file>test.html</welcome-file>
    </welcome-file-list>

@@ -9,6 +9,10 @@ public class ResourceID {
 		this.id = id;
 	}
 	
+	public ResourceID(Integer id) {
+		this(null, id);
+	}
+
 	public boolean equals(ResourceID resID) {
 		return this.equals(resID);
 	}

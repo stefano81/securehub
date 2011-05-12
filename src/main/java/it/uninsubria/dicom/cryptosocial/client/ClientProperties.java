@@ -15,4 +15,6 @@ public interface ClientProperties {
 
 	String getSymmetricAlgorithm();
 
+	String getParametersPathString();
+
 }

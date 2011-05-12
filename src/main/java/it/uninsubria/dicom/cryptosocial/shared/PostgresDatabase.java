@@ -1,8 +1,8 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
 import it.uninsubria.dicom.cryptosocial.client.ClientDatabase;
-import it.uninsubria.dicom.cryptosocial.client.CryptoSocial;
 import it.uninsubria.dicom.cryptosocial.server.ServerDatabase;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameters;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,14 +16,12 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
 public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	private static PostgresDatabase database;
-	private static Logger logger;
 	
 	private ConnectionPool pool;
 	
@@ -85,8 +83,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			Connection connection = pool.getConnection();
 		
 			PreparedStatement updateKeysStatement = connection.prepareStatement(updateKeysQuery);
-			
-			logger.info(updateKeysStatement.toString());
 			
 			updateKeysStatement.setBytes(1,	convertKeysToBytes(keys.getPublic()));
 			updateKeysStatement.setBytes(2,	convertKeysToBytes(keys.getPrivate()));
@@ -196,7 +192,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 
 
 	@Override
-	public EncryptedResource getResource(int resourceId) {
+	public Resource getResource(ResourceID id) {
 		EncryptedResource resource = null;
 		
 		try {
@@ -204,7 +200,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			
 			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
 			
-			getResourceStatement.setInt(1, resourceId);
+			getResourceStatement.setInt(1, id.getID());
 			
 			ResultSet rs = getResourceStatement.executeQuery();
 			
@@ -296,12 +292,13 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			Connection connection = pool.getConnection();
 			
 			PreparedStatement ownerKeysStatement = connection.prepareStatement(ownerKeysQuery);
+			ownerKeysStatement.setString(1, uid);
 			ResultSet ownerKeysRS = ownerKeysStatement.executeQuery();
 			
 			if (ownerKeysRS.next()) {
 				ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(ownerKeysRS.getBytes("public_key")));
 
-				publicKey = (CipherParameters) ois.readObject();
+				publicKey = (HVEIP08PublicKeyParameters) ois.readObject();
 			}
 		} catch (ConnectionPoolException e) {
 			// TODO
@@ -322,7 +319,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 
 
 	@Override
-	public ResourceID insertResource(String uid, String name, byte[] encryptedResource, byte[] encryptedSymmetricKey) {
+	public ResourceID insertResource(String uid, String name, Resource resource) {
 		ResourceID rid = null;
 		
 		try {
@@ -330,8 +327,8 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			
 			PreparedStatement insertResourceStatement = connection.prepareStatement(insertResourceQuery);
 
-			insertResourceStatement.setBytes(1, encryptedResource);
-			insertResourceStatement.setBytes(2, encryptedSymmetricKey);
+			insertResourceStatement.setBytes(1, resource.getResource());
+			insertResourceStatement.setBytes(2, resource.getKey());
 			insertResourceStatement.setString(3, name);
 			insertResourceStatement.setString(4, uid);
 			
@@ -405,7 +402,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 		
 		return false;
 	}
-
 
 	@Override
 	public CipherParameters getUserPrivateKey(String emitter) {

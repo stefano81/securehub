@@ -42,7 +42,8 @@ public class EncryptedResourceTest {
 
 	@Test
 	public void testGetResource() {
-		fail("Not yet implemented");
+		assertThat(res1.length, is(equalTo(resource.getResource().length)));
+		assertThat(res1, is(equalTo(resource.getResource())));
 	}
 
 	@Test

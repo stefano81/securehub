@@ -20,7 +20,7 @@ public final class CommonProperties implements DatabaseProperties, ClientPropert
 
 		properties = new Properties();
 		try {
-			properties.load(this.getClass().getResourceAsStream("it/uninsubria/dicom/cryptosocial/config.properties"));
+			properties.load(this.getClass().getClassLoader().getResourceAsStream("it/uninsubria/dicom/cryptosocial/config.properties"));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -77,5 +77,10 @@ public final class CommonProperties implements DatabaseProperties, ClientPropert
 	@Override
 	public String getUsername() {
 		return properties.getProperty("username");
+	}
+
+	@Override
+	public String getParametersPathString() {
+		return properties.getProperty("parametersPath");
 	}
 }

@@ -1,4 +1,4 @@
-package it.uninsubria.dicom.cryptosocial.client;
+package it.uninsubria.dicom.cryptosocial.shared;
 
 import static org.junit.Assert.*;
 
@@ -6,7 +6,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class CryptoSocialTest {
+public class ResourceIDTest {
 
 	@Before
 	public void setUp() throws Exception {}
@@ -15,32 +15,27 @@ public class CryptoSocialTest {
 	public void tearDown() throws Exception {}
 
 	@Test
-	public void testCryptoSocial() {
+	public void testResourceIDStringInteger() {
 		fail("Not yet implemented"); // TODO
 	}
 
 	@Test
-	public void testCryptoSocialClientPropertiesClientDatabaseKeyGeneratorKeyGenerationHVEIP08KeyPairGeneratorResourceRepository() {
+	public void testResourceIDInteger() {
 		fail("Not yet implemented"); // TODO
 	}
 
 	@Test
-	public void testRegisterUser() {
+	public void testEqualsResourceID() {
 		fail("Not yet implemented"); // TODO
 	}
 
 	@Test
-	public void testRetrieveResource() {
+	public void testGetName() {
 		fail("Not yet implemented"); // TODO
 	}
 
 	@Test
-	public void testSearchResources() {
-		fail("Not yet implemented"); // TODO
-	}
-
-	@Test
-	public void testPublishResource() {
+	public void testGetID() {
 		fail("Not yet implemented"); // TODO
 	}
 

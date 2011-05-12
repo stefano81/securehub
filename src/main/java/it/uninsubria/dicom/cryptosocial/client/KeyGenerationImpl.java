@@ -1,19 +1,9 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
-import it.uninsubria.dicom.cryptosocial.shared.ConnectionPoolException;
-import it.uninsubria.dicom.cryptosocial.shared.DatabasePoolImplPostgres;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08SearchKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SearchKeyGenerationParameters;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.lang.reflect.Array;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -27,6 +17,7 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	private final ClientDatabase database;
 	
 	public static long SLEEPTIME = 5000l;
+	private static KeyGeneration	instance;
 	
 	private class WorkItem {
 		private String	emitter;
@@ -40,7 +31,8 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 		}
 		
 		public WorkItem(String emitter, String receiver) {
-			this(emitter, receiver, null);
+			this.emitter = emitter;
+			this.receiver = receiver;
 		}
 
 		public String getEmitter() {
@@ -129,5 +121,12 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 				}
 			}
 		}
+	}
+
+	public static KeyGeneration getInstance(ClientDatabase clientDatabase) {
+		if (null == instance)
+			instance = new KeyGenerationImpl(clientDatabase);
+		
+		return instance;
 	}
 }
