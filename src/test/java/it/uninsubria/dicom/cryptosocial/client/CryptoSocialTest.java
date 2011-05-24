@@ -2,13 +2,17 @@ package it.uninsubria.dicom.cryptosocial.client;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-
 import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08KeyPairGenerator;
+import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
+import it.uninsubria.dicom.cryptosocial.shared.EncryptedResource;
+import it.uninsubria.dicom.cryptosocial.shared.Resource;
+import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
 
-import javax.crypto.KeyGenerator;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
+import org.bouncycastle.crypto.CipherParameters;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -33,23 +37,22 @@ public class CryptoSocialTest {
 	private CryptoSocial cs;
 
 	private ResourceRepository	repository;
-	private HVEIP08KeyPairGenerator	keyPairGenerator;
 	private ClientProperties	properties;
 	private ClientDatabase	database;
-	private KeyGenerator	symmetricKeyGenerator;
+	private CryptoInterface	cryptoInterface;
 	private KeyGeneration	keyGeneration;
 	private AsymmetricCipherKeyPair keyPair;
+	private EncryptedResource resource = context.mock(EncryptedResource.class);
 	
 	@Before
 	public void setUp() throws Exception {
 		repository = context.mock(ResourceRepository.class);
-		keyPairGenerator = context.mock(HVEIP08KeyPairGenerator.class);
 		properties = context.mock(ClientProperties.class);
 		database = context.mock(ClientDatabase.class);
-		symmetricKeyGenerator = context.mock(KeyGenerator.class);
+		cryptoInterface = context.mock(CryptoInterface.class);
 		keyGeneration = context.mock(KeyGeneration.class);
 		
-		cs = new CryptoSocial(properties, database, symmetricKeyGenerator, keyGeneration, keyPairGenerator, repository);
+		cs = new CryptoSocial(properties, database, cryptoInterface, keyGeneration, repository);
 	}
 
 	@After
@@ -60,33 +63,77 @@ public class CryptoSocialTest {
 	@Test
 	public void testRegisterUser() {
 		keyPair = context.mock(AsymmetricCipherKeyPair.class);
+		@SuppressWarnings("serial")
+		final List<String> friendList = new ArrayList<String>() {{
+			add("paperino");
+			add("pluto");
+		}};
 		
 		context.checking(new Expectations() {{
-			oneOf(keyPairGenerator).generateKeyPair(); will(returnValue(keyPair));
-			oneOf(database).updateKeys(with(equal(UID)), with(equal(keyPair)));
-			oneOf(database).getAccessToken(with(equal(UID))); will(returnValue(AT));
-			allowing(database).existsUser(with(any(String.class))); will(returnValue(true));
-			allowing(database).insertFriendship(with(any(String.class)), with(equal(UID)));
+			oneOf(database).updateKeys(with(equalTo(UID)), with(equal(keyPair)));
+			atLeast(1).of(database).existsUser(with(any(String.class))); will(returnValue(true));
+			atLeast(1).of(database).insertFriendship(with(any(String.class)), with(equal(UID)));
 			allowing(database).insertFriendship(with(equal(UID)), with(any(String.class)));
-			allowing(keyGeneration).propagate(with(any(String.class)), with(equal(UID)));
+			oneOf(database).addUser(with(equal(UID)));
+			oneOf(database).getFriendsList(with(equal(AT))); will(returnValue(friendList));
+			atLeast(1).of(keyGeneration).propagate(with(any(String.class)), with(equal(UID)));
 		}});
 		
 		cs.registerUser(UID);
 	}
 
 	@Test
-	public void testRetrieveResource() {
+	public void testRetrieveResourceNotFoundKey() {
+		
+		
+		context.checking(new Expectations() {{
+			oneOf(repository).getResource(with(any(ResourceID.class))); will(returnValue((Resource)resource));
+			oneOf(database).enumerateUserKeys(with(equal(UID))); will(returnIterator(new ArrayList<CipherParameters>()));
+		}});
+		
 		byte[] retrievedResource = cs.retrieveResource(RID, UID);
 		
-		fail("Not yet implemented"); // TODO
+		assertThat(null, is(equalTo(retrievedResource)));
+	}
+	
+	@Test
+	public void testRetrieveResourceNotFoundResource() {
+		context.checking(new Expectations() {{
+			oneOf(repository).getResource(with(any(ResourceID.class))); will(returnValue(null));
+			allowing(database).enumerateUserKeys(with(equal(UID)));
+		}});
+		
+		byte[] retrievedResource = cs.retrieveResource(RID, UID);
+		
+		assertThat(null, is(equalTo(retrievedResource)));
+	}
+	
+	@Test
+	public void testRetrieveResourceFoundKey() {
+		fail("Not implemented yet");
+
+		context.checking(new Expectations() {{
+			oneOf(repository).getResource(with(any(ResourceID.class))); will(returnValue((Resource)resource));
+		//	oneOf(database).enumerateUserKeys(with(equal(UID))); will(return)
+		}});
+		
+		byte[] retrievedResource = cs.retrieveResource(RID, UID);
+		
+		assertThat(null, is(equalTo(retrievedResource)));
 	}
 
 	@Test
 	public void testSearchResources() {
-		String expected = "[\n\n]\n".trim();
+		String expected = "[\n\t{\n\t\"id\": \"1\",\n\t\"name\": \"pippo\"\n\t},\n\t{\n\t\"id\": \"2\",\n\t\"name\": \"pluto\"\n\t}\n]";
+		
+		@SuppressWarnings("serial")
+		final List<ResourceID> res = new ArrayList<ResourceID>() {{
+			add(new ResourceID("pippo", 1));
+			add(new ResourceID("pluto", 2));
+		}};
 		
 		context.checking(new Expectations() {{
-			oneOf(repository).searchResources(with(equal(QUERY)));
+			oneOf(repository).searchResources(with(equal(QUERY))); will(returnIterator(res));
 		}});
 		
 		String result = cs.searchResources(QUERY);

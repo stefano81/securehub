@@ -13,15 +13,23 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Statement;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
+import com.restfb.DefaultFacebookClient;
+import com.restfb.FacebookClient;
+import com.restfb.types.User;
+
 public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	private static PostgresDatabase database;
+	private static Logger logger = Logger.getLogger(PostgresDatabase.class);
 	
 	private ConnectionPool pool;
 	
@@ -45,7 +53,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	 
 	// KeyGeneration
 	private final String getUserKeyQuery = "SELECT private_key FROM users WHERE uid = ?";
-	private final String insertKey = "INSERT INTO keys (owner, key) VALUES (?, ?)";
+	private final String insertKey = "INSERT INTO keys (owner, emitter, key) VALUES (?, ?, ?)";
 
 	private PostgresDatabase() {		
 		pool = new DatabasePoolImplPostgres(CommonProperties.getInstance());
@@ -60,6 +68,105 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 		
 		return database;
 	}	
+	
+
+	@Override
+	public ResourceID insertResource(String uid, String name, Resource resource) {
+		ResourceID rid = null;
+		
+		try {
+			Connection connection = pool.getConnection();
+			
+			PreparedStatement insertResourceStatement = connection.prepareStatement(insertResourceQuery, Statement.RETURN_GENERATED_KEYS);
+
+			insertResourceStatement.setBytes(1, resource.getResource());
+			insertResourceStatement.setBytes(2, resource.getKey());
+			insertResourceStatement.setString(3, name);
+			insertResourceStatement.setString(4, uid);
+			
+			if (1 == insertResourceStatement.executeUpdate()) {
+				try {
+					ResultSet resourceID = insertResourceStatement.getGeneratedKeys();
+				
+					if (resourceID.next()) {
+						rid = new ResourceID(name, resourceID.getInt("id"));
+					} else {
+						logger.error("Unable to retrieve id");
+					}
+				} catch (SQLFeatureNotSupportedException e) {
+					e.printStackTrace();
+				}
+			} else {
+				logger.error("Modified more than one tuple");
+			}
+		} catch (ConnectionPoolException e) {
+			// TODO
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return rid;
+	}
+	
+
+	@Override
+	public Resource getResource(ResourceID id) {
+		EncryptedResource resource = null;
+		
+		try {
+			Connection connection = pool.getConnection();
+			
+			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
+			
+			getResourceStatement.setInt(1, id.getID());
+			
+			ResultSet rs = getResourceStatement.executeQuery();
+			
+			if (rs.next()) {
+				resource = new EncryptedResource(rs.getBytes("resource"), rs.getBytes("privatekey"));
+			}
+		} catch (ConnectionPoolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return resource;
+	}
+	
+
+	@Override
+	public Iterator<ResourceID> searchResources(String name) {
+		List<ResourceID> resources = new LinkedList<ResourceID>();
+		
+		try {
+			Connection connection = pool.getConnection();
+
+			PreparedStatement statement = connection.prepareStatement(searchResourceQuery);
+			
+			statement.setString(1, "%" + name + "%");
+	
+			ResultSet rs = statement.executeQuery();
+	
+			while (rs.next()) {
+				resources.add(new ResourceID(rs.getString("name"), rs.getInt("id")));
+			}
+		} catch (ConnectionPoolException e) {
+			// TODO
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return resources.iterator();
+	}
+
+
 
 	// CLIENT
 	
@@ -68,12 +175,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			database = new PostgresDatabase();
 		
 		return database;
-	}
-	
-	@Override
-	public void addUser(User user) {
-		// TODO Auto-generated method stub
-		
 	}
 
 
@@ -112,8 +213,9 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	}
 
 
-	@Override
-	public String getAccessToken(String uid) {
+	protected String getAccessToken(String uid) {
+		logger.debug("Retrieving access token for " + uid);
+		
 		String accessToken = null;
 		
 		try {
@@ -123,10 +225,15 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			
 			getTokenStatement.setString(1, uid);
 			
+			logger.info(getTokenStatement.toString());
+			
 			ResultSet rs = getTokenStatement.executeQuery();
 			
 			if (rs.next()) {
 				accessToken = rs.getString("access_token");
+				logger.debug("AT found: " + accessToken);
+			} else {
+				logger.debug("AT not found");
 			}
 			
 		} catch (ConnectionPoolException e) {
@@ -143,6 +250,8 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 
 	@Override
 	public boolean existsUser(String uid) {
+		logger.debug("Checking existence for " + uid);
+		
 		try {
 			Connection connection = pool.getConnection();
 			
@@ -153,6 +262,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			ResultSet rs = checkUserStatement.executeQuery();
 			
 			if (rs.next()) {
+				logger.debug(uid + " is registered");
 				return true;
 			}
 		} catch (ConnectionPoolException e) {
@@ -163,11 +273,15 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			e.printStackTrace();
 		}
 		
+		logger.debug(uid + "is not registered");
+		
 		return false;
 	}
 
 	@Override
 	public void insertFriendship(String user1, String user2) {
+		logger.debug("Inserting friendship (" + user1 + ", " + user2 + ")");
+		
 		try {
 			Connection connection = pool.getConnection();
 			
@@ -177,9 +291,9 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			insertFrienshipStatement.setString(2, user2);
 		
 			if (1 == insertFrienshipStatement.executeUpdate()) {
-				
+				logger.debug("Friendship added");
 			} else {
-				
+				logger.error("Error adding friendships");
 			}
 		} catch (ConnectionPoolException e) {
 			// TODO Auto-generated catch block
@@ -189,35 +303,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			e.printStackTrace();
 		}
 	}
-
-
-	@Override
-	public Resource getResource(ResourceID id) {
-		EncryptedResource resource = null;
-		
-		try {
-			Connection connection = pool.getConnection();
-			
-			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
-			
-			getResourceStatement.setInt(1, id.getID());
-			
-			ResultSet rs = getResourceStatement.executeQuery();
-			
-			if (rs.next()) {
-				resource = new EncryptedResource(rs.getBytes("resource"), rs.getBytes("privatekey"));
-			}
-		} catch (ConnectionPoolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return resource;
-	}
-
 
 	@Override
 	public Iterator<CipherParameters> enumerateUserKeys(String uid) {
@@ -255,35 +340,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 		return keys.iterator();
 	}
 
-
-	@Override
-	public Iterator<ResourceID> searchResources(String name) {
-		List<ResourceID> resources = new LinkedList<ResourceID>();
-		
-		try {
-			Connection connection = pool.getConnection();
-
-			PreparedStatement statement = connection.prepareStatement(searchResourceQuery);
-			
-			statement.setString(1, "%" + name + "%");
-	
-			ResultSet rs = statement.executeQuery();
-	
-			while (rs.next()) {
-				resources.add(new ResourceID(rs.getString("name"), rs.getInt("id")));
-			}
-		} catch (ConnectionPoolException e) {
-			// TODO
-			e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return resources.iterator();
-	}
-
-
 	@Override
 	public CipherParameters getPublicKey(String uid) {
 		CipherParameters publicKey = null;
@@ -318,44 +374,11 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	}
 
 
-	@Override
-	public ResourceID insertResource(String uid, String name, Resource resource) {
-		ResourceID rid = null;
-		
-		try {
-			Connection connection = pool.getConnection();
-			
-			PreparedStatement insertResourceStatement = connection.prepareStatement(insertResourceQuery);
-
-			insertResourceStatement.setBytes(1, resource.getResource());
-			insertResourceStatement.setBytes(2, resource.getKey());
-			insertResourceStatement.setString(3, name);
-			insertResourceStatement.setString(4, uid);
-			
-			if (1 == insertResourceStatement.executeUpdate()) {
-				ResultSet resourceID = insertResourceStatement.getGeneratedKeys();
-				
-				if (resourceID.next()) {
-					rid = new ResourceID(name, resourceID.getInt("id"));
-				}
-			}
-		} catch (ConnectionPoolException e) {
-			// TODO
-			e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return rid;
-	}
-
 
 	@Override
 	public Iterator<String> getUserFriends(String uid) {
 		List<String> friendIDs = new LinkedList<String>();
-		
-		
+
 		try {
 			Connection connection = pool.getConnection();
 			PreparedStatement ownerFriendsStatement = connection.prepareStatement(ownerFriendQuery);
@@ -380,15 +403,24 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	
 
 	@Override
-	public boolean insertKey(String receiver, CipherParameters searchKey) {
+	public int insertKey(String receiver, String emitter, CipherParameters searchKey) {
+		int keyID = -1;
+		
 		try {
 			Connection connection = pool.getConnection();
-			PreparedStatement ps = connection.prepareStatement(insertKey);
+			PreparedStatement ps = connection.prepareStatement(insertKey, Statement.RETURN_GENERATED_KEYS);
 		    
 			ps.setString(1, receiver);
-		    ps.setBytes(2, convertKeysToBytes(searchKey));
+			ps.setString(2, emitter);
+		    ps.setBytes(3, convertKeysToBytes(searchKey));
 		    
-			return 1 == ps.executeUpdate();
+			if (1 == ps.executeUpdate()) {
+				ResultSet rs = ps.getGeneratedKeys();
+				
+				if (rs.next()) {
+					return rs.getInt("id");
+				}
+			}
 		} catch (ConnectionPoolException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -400,7 +432,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			e.printStackTrace();
 		}
 		
-		return false;
+		return keyID;
 	}
 
 	@Override
@@ -434,5 +466,35 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 		}
 		
 		return privateKey;
+	}
+
+
+	@Override
+	public List<String> getFriendsList(String uid) {
+		logger.debug("Retrieving friends");
+		
+		FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
+		List<User> users = fbClient.fetchConnection("me/friends", User.class).getData();
+		
+		logger.debug("Processing " + users.size() + " friends");
+		
+		List<String> friends = new LinkedList<String>();
+		
+		for (User user: users) {
+			friends.add(user.getId());
+		}
+		
+		return friends;
+	}
+
+
+	@Override
+	public void addUser(String uid) {
+		logger.debug("Adding user data for " + uid);
+		
+		FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
+		User userData = fbClient.fetchObject("me", User.class);
+		
+		// TODO
 	}
 }

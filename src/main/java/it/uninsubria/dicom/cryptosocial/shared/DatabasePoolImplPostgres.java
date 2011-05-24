@@ -34,7 +34,7 @@ public class DatabasePoolImplPostgres implements ConnectionPool {
 		Connection conn = null;
 		
 		if (0 < freeConnection.size()) {
-			conn = freeConnection.peek();
+			conn = freeConnection.poll();
 			
 			try {
 				if (conn.isClosed()) {

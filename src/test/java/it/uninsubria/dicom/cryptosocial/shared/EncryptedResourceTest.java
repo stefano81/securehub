@@ -1,12 +1,10 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
-import static org.junit.Assert.*;
-
 import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 
 import java.util.Random;
 
-import org.hamcrest.core.IsEqual;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
