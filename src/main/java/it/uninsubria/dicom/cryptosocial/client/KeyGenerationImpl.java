@@ -1,8 +1,6 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08AttributesOnlySearchKeyGenerator;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SearchKeyGenerationParameters;
+import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -53,13 +51,13 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	}
 	
 	public List<WorkItem> toGenerate;
-	private HHVEIP08AttributesOnlySearchKeyGenerator	generator;
+	private CryptoInterface	cryptoInterface;
 	
-	protected KeyGenerationImpl(ClientDatabase database) {
+	protected KeyGenerationImpl(ClientDatabase database, CryptoInterface cryptoInterface) {
 		toGenerate = new LinkedList<WorkItem>();
 		this.database = database;
 		
-		this.generator = new HHVEIP08AttributesOnlySearchKeyGenerator();
+		this.cryptoInterface = cryptoInterface;
 	}
 	
 	@Override
@@ -108,10 +106,8 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 				// get resources of emitter
 				if (wi.isPolicySet()) {
 					logger.debug("Initial generation: (" + wi.getEmitter() + ", " + wi.getReceiver() + ", " + Arrays.toString(wi.getPolicy()) + ")");
-					
-			        generator.init(new HVEIP08SearchKeyGenerationParameters((HVEIP08PrivateKeyParameters) privateKey, wi.getPolicy()));
 
-			        CipherParameters searchKey = generator.generateKey();
+			        CipherParameters searchKey = cryptoInterface.generateSearchKey(privateKey, wi.getPolicy());
 			      
 			        int key = -1;
 			        
@@ -140,12 +136,15 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	protected void propagate(String receiver, String next, int key) {
 		logger.debug("Propagate key: (" + receiver + ", " + next + ", " + key + ")");
 		
-		// TODO
+		CipherParameters oldSearch = null;
+		int depth = 1;
+		
+		CipherParameters searchKey = cryptoInterface.delegate(oldSearch, depth);
 	}
 
-	public static KeyGeneration getInstance(ClientDatabase clientDatabase) {
+	public static KeyGeneration getInstance(ClientDatabase clientDatabase, CryptoInterface cryptoInterface) {
 		if (null == instance) {
-			instance = new KeyGenerationImpl(clientDatabase);
+			instance = new KeyGenerationImpl(clientDatabase, cryptoInterface);
 			((KeyGenerationImpl)instance).start();
 		}
 		

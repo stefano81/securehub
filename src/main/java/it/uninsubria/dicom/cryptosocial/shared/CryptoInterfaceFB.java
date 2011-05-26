@@ -1,5 +1,8 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HHVEIP08AttributesOnlySearchKeyGenerator;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SearchKeyGenerationParameters;
 import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08AttributesEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HHVEIP08Engine;
@@ -208,67 +211,40 @@ public class CryptoInterfaceFB implements CryptoInterface {
 		return keyPairGenerator.generateKeyPair();
 	}
 
-	protected boolean testSearchKey(Resource res, CipherParameters searchKey) {
-		byte[] ct = res.getKey();
-		
-		HHVEIP08AttributesEngine engine = new HHVEIP08AttributesEngine();
-		engine.init(false, searchKey);
-
-		return engine.processBlock(ct, 0, ct.length)[0] == 0;
-	}
-
 	@Override
-	public byte[] decryptResource(Resource resource, Iterator<CipherParameters> listKeys) {
-		boolean decrypted = false;
-
-		CipherParameters searchKey = null;
-
-		while (listKeys.hasNext()) {
-			// extract key
-			searchKey = listKeys.next();
-
-			// try key
-			if (decrypted = testSearchKey(resource, searchKey)) {
-				break;
-			}
+	public byte[] decryptResource(Resource resource, CipherParameters key) {
+		SecretKey symmetricKey = decryptSymmetricKey(resource.getKey(), key);
+			
+		Cipher cipher = null;
+		
+		try {
+			cipher = Cipher.getInstance(properties.getSymmetricAlgorithm());
+			
+			cipher.init(Cipher.DECRYPT_MODE, symmetricKey);
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-		if (decrypted) {
-			SecretKey symmetricKey = decryptSymmetricKey(resource.getKey(), searchKey);
-			
-			Cipher cipher = null;
-			try {
-				cipher = Cipher.getInstance(properties.getSymmetricAlgorithm());
-				
-				cipher.init(Cipher.DECRYPT_MODE, symmetricKey);
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (NoSuchPaddingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		ByteArrayOutputStream dResource = new ByteArrayOutputStream();
+		CipherOutputStream cOut = new CipherOutputStream(dResource, cipher);
 
-			ByteArrayOutputStream dResource = new ByteArrayOutputStream();
-			CipherOutputStream cOut = new CipherOutputStream(dResource, cipher);
-
-			try {
-				cOut.write(resource.getResource());
-			
-				cOut.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			return dResource.toByteArray();
-		} else {
-			return null;
+		try {
+			cOut.write(resource.getResource());
+		
+			cOut.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
+		return dResource.toByteArray();
 	}
 
 	private SecretKey decryptSymmetricKey(byte[] bytes, CipherParameters privateKey) {
@@ -297,4 +273,28 @@ public class CryptoInterfaceFB implements CryptoInterface {
 		return null; // TMCH
 	}
 
+	@Override
+	public CipherParameters generateSearchKey(CipherParameters privateKey, int... policy) {
+		HHVEIP08AttributesOnlySearchKeyGenerator generator = new HHVEIP08AttributesOnlySearchKeyGenerator();
+		
+		generator.init(new HVEIP08SearchKeyGenerationParameters((HVEIP08PrivateKeyParameters) privateKey, policy));
+		
+		return generator.generateKey();
+	}
+
+	@Override
+	public CipherParameters delegate(CipherParameters oldSearch, int depth) {
+
+		return null; // TODO
+	}
+
+	@Override
+	public boolean testKey(Resource res, CipherParameters searchKey) {
+		byte[] ct = res.getKey();
+		
+		HHVEIP08AttributesEngine engine = new HHVEIP08AttributesEngine();
+		engine.init(false, searchKey);
+
+		return engine.processBlock(ct, 0, ct.length)[0] == 0;
+	}
 }

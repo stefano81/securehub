@@ -2,6 +2,7 @@ package it.uninsubria.dicom.cryptosocial.client;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.Matchers.*;
+import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
 
 import org.jmock.Mockery;
 import org.jmock.integration.junit4.JMock;
@@ -19,6 +20,7 @@ public class KeyGenerationImplTest {
 	}};
 	
 	private ClientDatabase db;
+	private CryptoInterface ci;
 	private String emitter = "EMITTER";
 	private String receiver = "RECEIVER";
 	private int[] policy = {1, 1, 1, 1, 1};
@@ -28,8 +30,9 @@ public class KeyGenerationImplTest {
 	@Before
 	public void setUp() throws Exception {
 		db = context.mock(ClientDatabase.class);
+		ci = context.mock(CryptoInterface.class);
 		
-		kg = new KeyGenerationImpl(db);
+		kg = new KeyGenerationImpl(db, ci);
 	}
 
 	@After

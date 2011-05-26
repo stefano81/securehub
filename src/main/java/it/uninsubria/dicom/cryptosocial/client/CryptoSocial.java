@@ -52,7 +52,7 @@ public class CryptoSocial {
 		this(CommonProperties.getInstance(),
 				PostgresDatabase.getClientInstance(),
 				 CryptoInterfaceFB.getInstance(),
-				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance()),
+				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), CryptoInterfaceFB.getInstance()),
 				 ResourceStorerFB.getInstance());
 	}
 	
@@ -115,11 +115,24 @@ public class CryptoSocial {
 			// keys
 			Iterator<CipherParameters> listKeys = database.enumerateUserKeys(uid);
 			
+			boolean decrypted = false;
 			
-			return cryptoInterface.decryptResource(resource, listKeys);
-		} else {
-			return null;
+			CipherParameters key = null;
+			
+			while (listKeys.hasNext()) {
+				key = listKeys.next();
+				
+				if (cryptoInterface.testKey(resource, key)) {
+					decrypted = true;
+					break;
+				}
+			}
+			
+			if (decrypted && null != key)
+				return cryptoInterface.decryptResource(resource, key);
 		}
+
+		return null;
 	}
 
 	@GET
