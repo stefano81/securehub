@@ -71,7 +71,7 @@ public class CryptoInterfaceFB implements CryptoInterface {
 			curveParams.load(properties.getCurveParams());
 
 			HVEIP08ParametersGenerator generator = new HVEIP08ParametersGenerator();
-			generator.init(curveParams, properties.getLength());
+			generator.init(properties.getLength(), curveParams);
 
 			parameters = generator.generateParameters();
 
