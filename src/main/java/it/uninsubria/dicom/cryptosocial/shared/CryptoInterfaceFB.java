@@ -75,21 +75,6 @@ public class CryptoInterfaceFB implements CryptoInterface {
 
 			parameters = generator.generateParameters();
 
-/*			File parameterFile = new File(new File(this.getClass().getClassLoader().getResource("/").getFile() + "/../").getAbsolutePath() + properties.getParametersPathString());
-
-			logger.debug(parameterFile.getAbsolutePath());
-
-			ObjectOutputStream oos;
-			try {
-				oos = new ObjectOutputStream(new FileOutputStream(parameterFile));
-				oos.writeObject(parameters);
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}*/
 			logger.debug("Parameters generated");
 		} else {
 			logger.debug("existing");
@@ -116,16 +101,6 @@ public class CryptoInterfaceFB implements CryptoInterface {
 		
 		logger.debug("initialized");
 	}
-
-	/*@Override
-	public KeyGenerator getSymmetricKeyGenerator() {
-		return this.symmetricKeyGenerator;
-	}
-
-	@Override
-	public HVEIP08KeyPairGenerator getKeyPairGenerator() {
-		return this.keyPairGenerator;
-	}*/
 
 	@Override
 	public Resource encrypt(byte[] resource, int[] policy, CipherParameters publicKey) {
