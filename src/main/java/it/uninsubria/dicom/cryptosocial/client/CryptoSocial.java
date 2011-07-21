@@ -5,6 +5,7 @@ import it.uninsubria.dicom.cryptosocial.server.ResourceStorerFB;
 import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterfaceFB;
+import it.uninsubria.dicom.cryptosocial.shared.MySQLDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.PostgresDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.Resource;
 import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
@@ -50,7 +51,8 @@ public class CryptoSocial {
 
 	public CryptoSocial() throws NoSuchAlgorithmException, FileNotFoundException, IOException, ClassNotFoundException {
 		this(CommonProperties.getInstance(),
-				PostgresDatabase.getClientInstance(),
+				//PostgresDatabase.getClientInstance(),
+				MySQLDatabase.getClientInstance(),
 				 CryptoInterfaceFB.getInstance(),
 				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), CryptoInterfaceFB.getInstance()),
 				 ResourceStorerFB.getInstance());

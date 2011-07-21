@@ -39,16 +39,6 @@ public class ResourceStorerFBTest {
 	}
 
 	@Test
-	public void testResourceStorerFBServerDatabase() {
-		fail("Not yet implemented"); // TODO
-	}
-
-	@Test
-	public void testResourceStorerFB() {
-		fail("Not yet implemented"); // TODO
-	}
-
-	@Test
 	public void testStoreResource() {
 		fail("Not yet implemented"); // TODO
 	}
