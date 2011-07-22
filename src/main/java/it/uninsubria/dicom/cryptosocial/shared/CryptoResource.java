@@ -7,6 +7,7 @@ public class CryptoResource implements Resource {
 
 
     public CryptoResource(int depth, byte[] resource, byte[] key) {
+        this.depth = depth;
         this.resource = resource;
         this.key = key;
     }

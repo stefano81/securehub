@@ -16,7 +16,7 @@ import java.security.SecureRandom;
 public class DBRASetup {
 
     public static DBRAKeyPairParameters setup(int hveLength, String hveCurve,
-                                              int hibeBitLenght, int hibeLength) {
+                                              int hibeLength, int hibeBitLenght) {
         HVEIP08ParametersGenerator hveParamGen = new HVEIP08ParametersGenerator();
         hveParamGen.init(hveLength, PairingFactory.getInstance().loadCurveParameters(hveCurve));
 

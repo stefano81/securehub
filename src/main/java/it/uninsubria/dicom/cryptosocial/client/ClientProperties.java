@@ -17,4 +17,6 @@ public interface ClientProperties {
 
 	String getParametersPathString();
 
+	String getCurveParamsLocation();
+
 }

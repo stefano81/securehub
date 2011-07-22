@@ -4,11 +4,10 @@ package it.uninsubria.dicom.cryptosocial.client;
 import java.util.Iterator;
 import java.util.List;
 
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
 public interface ClientDatabase {
-	public void updateKeys(String uid, AsymmetricCipherKeyPair keys);
+	public void updateKeys(String uid, CipherParameters keys);
 	public boolean existsUser(String id);
 	public void insertFriendship(String uid, String id);
 	public Iterator<CipherParameters> enumerateUserKeys(String uid);

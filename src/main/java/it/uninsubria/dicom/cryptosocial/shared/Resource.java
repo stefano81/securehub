@@ -1,6 +1,10 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
-public interface Resource {
-	public abstract byte[] getResource();
-	public abstract byte[] getKey();
+import java.io.Serializable;
+
+public interface Resource extends Serializable {
+
+	public byte[] getResource();
+
+	public byte[] getKey();
 }

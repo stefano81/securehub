@@ -4,7 +4,9 @@ import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
 import it.uninsubria.dicom.cryptosocial.server.ResourceStorerFB;
 import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
-import it.uninsubria.dicom.cryptosocial.shared.CryptoInterfaceFB;
+import it.uninsubria.dicom.cryptosocial.shared.DBRACryptoInterface;
+import it.uninsubria.dicom.cryptosocial.shared.DBRAKeyPairParameters;
+import it.uninsubria.dicom.cryptosocial.shared.DBRASetup;
 import it.uninsubria.dicom.cryptosocial.shared.MySQLDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.PostgresDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.Resource;
@@ -33,7 +35,6 @@ import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.Logger;
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
 @Path("cryptosocial/")
@@ -53,8 +54,9 @@ public class CryptoSocial {
 		this(CommonProperties.getInstance(),
 				//PostgresDatabase.getClientInstance(),
 				MySQLDatabase.getClientInstance(),
-				 CryptoInterfaceFB.getInstance(),
-				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), CryptoInterfaceFB.getInstance()),
+				 //CryptoInterfaceFB.getInstance(),
+				new DBRACryptoInterface(),
+				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), new DBRACryptoInterface()),
 				 ResourceStorerFB.getInstance());
 	}
 	
@@ -72,7 +74,7 @@ public class CryptoSocial {
 		logger.debug("user/" + uid);
 
 		// generate user keys
-		AsymmetricCipherKeyPair keys = cryptoInterface.generateKeyPair();
+		DBRAKeyPairParameters keys = DBRASetup.setup(properties.getLength(), properties.getCurveParamsLocation(), properties.getLength(), properties.getLength()); //cryptoInterface.generateKeyPair();
 		
 		logger.debug("Key pair generated");
 		
@@ -121,17 +123,20 @@ public class CryptoSocial {
 			
 			CipherParameters key = null;
 			
+			
 			while (listKeys.hasNext()) {
 				key = listKeys.next();
 				
-				if (cryptoInterface.testKey(resource, key)) {
+				/*if (cryptoInterface.testKey(resource, key)) {
 					decrypted = true;
 					break;
-				}
+				}*/
+				
 			}
 			
 			if (decrypted && null != key)
-				return cryptoInterface.decryptResource(resource, key);
+				return cryptoInterface.decrypt(key, resource);
+			
 		}
 
 		return null;
@@ -220,7 +225,7 @@ public class CryptoSocial {
 			if (null != publicKey) {
 				logger.debug("Public key not null");
 				
-				Resource res = cryptoInterface.encrypt(resource.toByteArray(), policy, publicKey);
+				Resource res = cryptoInterface.encrypt(publicKey, policy, resource.toByteArray());
 				
 				logger.debug("Inserting");
 				ResourceID rid = repository.storeResource(uid, name, res);  

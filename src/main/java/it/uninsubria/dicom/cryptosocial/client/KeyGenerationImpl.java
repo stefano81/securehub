@@ -21,16 +21,22 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 		private String	emitter;
 		private String	receiver;
 		private int[]	policy;
+		private int		depth;
+		private CipherParameters key;
 
 		public WorkItem(String emitter, String receiver, int ... policy) {
 			this.emitter = emitter;
 			this.receiver = receiver;
+			this.depth = 1;
 			this.policy = Arrays.copyOf(policy, policy.length);
 		}
 		
-		public WorkItem(String emitter, String receiver) {
+		public WorkItem(String emitter, String receiver, CipherParameters key, int depth, int ... policy) {
 			this.emitter = emitter;
 			this.receiver = receiver;
+			this.depth = depth;
+			this.key = key;
+			this.policy = Arrays.copyOf(policy, policy.length);
 		}
 
 		public String getEmitter() {
@@ -45,8 +51,16 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 			return policy;
 		}
 		
-		public boolean isPolicySet() {
-			return null != policy;
+		public boolean isKeySet() {
+			return null != key;
+		}
+
+		public CipherParameters getKey() {
+			return key;
+		}
+
+		public int getDepth() {
+			return depth;
 		}
 	}
 	
@@ -74,11 +88,13 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	public synchronized void propagate(String emitter, String receiver) {
 		logger.debug("Propagate from:" + emitter + " to " + receiver);
 		
-		WorkItem wi = new WorkItem(emitter, receiver);
+		// TODO
+		// scan for every key belonging to emitter and propagate it to the receiver
+		/*WorkItem wi = new WorkItem(emitter, receiver);
 		
 		toGenerate.add(wi);
 		
-		this.notify();
+		this.notify();*/
 	}
 	
 	@Override
@@ -91,7 +107,7 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 						this.wait();
 					}
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
+					// Hope it will not happen
 					e.printStackTrace();
 				}
 				
@@ -100,28 +116,24 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 			
 			WorkItem wi = toGenerate.remove(0);
 			
-			CipherParameters privateKey = database.getUserPrivateKey(wi.getEmitter());
+			CipherParameters asymmetricKey = database.getUserPrivateKey(wi.getEmitter());
 			
-			if (null != privateKey) {				
+			if (null != asymmetricKey) {				
 				// get resources of emitter
-				if (wi.isPolicySet()) {
+				if (wi.isKeySet()) {
 					logger.debug("Initial generation: (" + wi.getEmitter() + ", " + wi.getReceiver() + ", " + Arrays.toString(wi.getPolicy()) + ")");
 
-			        CipherParameters searchKey = cryptoInterface.generateSearchKey(privateKey, wi.getPolicy());
-			      
-			        int key = -1;
+			        CipherParameters searchKey = cryptoInterface.keyGeneration(asymmetricKey, wi.getPolicy());
 			        
-			        if (-1 != (key = database.insertKey(wi.getReceiver(), wi.getEmitter(), searchKey))) {
-			        	logger.debug("Key inserted, what to do now?");
+			        database.insertKey(wi.getReceiver(), wi.getEmitter(), searchKey);
 			        	
-			        	Iterator<String> friends = database.getUserFriends(wi.getReceiver());
+			        logger.debug("Key inserted, what to do now?");
 			        	
-			        	while  (friends.hasNext()) {
-			        		this.propagate(wi.getReceiver(), friends.next(), key);
-			        	}
-			        } else {
-						logger.error("Error generating key for (" + wi.getEmitter() + ", " + wi.getReceiver() + ")");
-			        }
+		        	Iterator<String> friends = database.getUserFriends(wi.getReceiver());
+		        	
+		        	while  (friends.hasNext()) {
+		        		this.propagate(wi.getReceiver(), friends.next(), searchKey);
+		        	}
 				} else {
 					logger.debug("Delegation: (" + wi.getEmitter() + ", " + wi.getReceiver() + ")");
 
@@ -133,13 +145,10 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 		}
 	}
 
-	protected void propagate(String receiver, String next, int key) {
+	protected void propagate(String receiver, String next, CipherParameters	key) {
 		logger.debug("Propagate key: (" + receiver + ", " + next + ", " + key + ")");
 		
-		CipherParameters oldSearch = null;
-		int depth = 1;
-		
-		CipherParameters searchKey = cryptoInterface.delegate(oldSearch, depth);
+		// TODO
 	}
 
 	public static KeyGeneration getInstance(ClientDatabase clientDatabase, CryptoInterface cryptoInterface) {

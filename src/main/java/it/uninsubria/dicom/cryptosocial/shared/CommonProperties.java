@@ -85,4 +85,9 @@ public final class CommonProperties implements DatabaseProperties, ClientPropert
 	public String getParametersPathString() {
 		return properties.getProperty("parametersPath");
 	}
+
+	@Override
+	public String getCurveParamsLocation() {
+		return properties.getProperty("curvePath");
+	}
 }

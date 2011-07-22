@@ -1,50 +1,42 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
 import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
+import it.unisa.dia.gas.crypto.engines.kem.KEMCipher;
+import it.unisa.dia.gas.crypto.engines.kem.KEMCipherDecryptionParameters;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HVEIP08Engine;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08KeyPairGenerator;
+import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HVEIP08KEMEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08ParametersGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08SecretKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.*;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.engines.AHIBEDIP10Engine;
-import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.generators.AHIBEDIP10KeyPairGenerator;
+import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.engines.AHIBEDIP10KEMEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.generators.AHIBEDIP10SecretKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.*;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import org.bouncycastle.crypto.AsymmetricBlockCipher;
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.paddings.ZeroBytePadding;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.*;
 import java.security.Key;
 import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Random;
 
 public class DBRACryptoInterface implements CryptoInterface {
 
     // Symmetric Engine
     protected KeyGenerator scKeyGen;
 
-    // HVE
-    protected HVEIP08Parameters hveParameters;
 
-
-    public DBRACryptoInterface(int n, String curve) {
+    public DBRACryptoInterface() {
         initSymmetricKeyGenerator();
-
-        initHVE(n, curve);
-    }
-
-    public DBRACryptoInterface(HVEIP08Parameters hveParameters) {
-        initSymmetricKeyGenerator();
-
-        this.hveParameters = hveParameters;
     }
 
 
@@ -54,26 +46,27 @@ public class DBRACryptoInterface implements CryptoInterface {
         // generate hve key
         HVEIP08SecretKeyGenerator hveKeyGenerator = new HVEIP08SecretKeyGenerator();
         hveKeyGenerator.init(new HVEIP08SecretKeyGenerationParameters(
-                (HVEIP08MasterSecretKeyParameters) keyPair.getHveKeyPair().getPrivate(), policy
+                (HVEIP08MasterSecretKeyParameters) keyPair.getMsk().getHveSk(),
+                Arrays.copyOf(policy, policy.length - 1)
         ));
         CipherParameters hveSk = hveKeyGenerator.generateKey();
 
         // generate hibe key
-        AHIBEDIP10PublicKeyParameters pk = (AHIBEDIP10PublicKeyParameters) keyPair.getHibeKeyPair().getPublic();
+        AHIBEDIP10PublicKeyParameters pk = (AHIBEDIP10PublicKeyParameters) keyPair.getPk().getHibePk();
 
         // Init identities
         Pairing pairing = PairingFactory.getPairing(pk.getCurveParameters());
 
         Element one = pairing.getZr().newOneElement();
-        Element ids[] = new Element[hveParameters.getAttributesLengthInBytes()];
+        Element ids[] = new Element[policy[policy.length - 1]];
         for (int i = 0; i < ids.length; i++) {
             ids[i] = one;
         }
 
         AHIBEDIP10SecretKeyGenerator hibeGenerator = new AHIBEDIP10SecretKeyGenerator();
         hibeGenerator.init(new AHIBEDIP10SecretKeyGenerationParameters(
-                (AHIBEDIP10MasterSecretKeyParameters) keyPair.getHibeKeyPair().getPrivate(),
-                (AHIBEDIP10PublicKeyParameters) keyPair.getHibeKeyPair().getPublic(),
+                (AHIBEDIP10MasterSecretKeyParameters) keyPair.getMsk().getHibeSk(),
+                (AHIBEDIP10PublicKeyParameters) keyPair.getPk().getHibePk(),
                 ids
         ));
 
@@ -105,24 +98,26 @@ public class DBRACryptoInterface implements CryptoInterface {
 
     public Resource encrypt(CipherParameters publicKey, int[] policy, byte[] resource) {
         try {
-            // Encrypt data using ephemeral symmetric key
+            // Encrypt resource using ephemeral symmetric key
             Key key = scKeyGen.generateKey();
-
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding");
             cipher.init(Cipher.ENCRYPT_MODE, key);
-            cipher.update(resource, 0, resource.length);
-            byte[] ct = cipher.doFinal();
+            byte[] ct = cipher.doFinal(resource);
 
             // Combine ct and the encryption of the key...
+
+//            System.out.println("ENCRYPT KEY " + Arrays.toString(key.getEncoded()));
+
+            // ENC HVE-HIBE
             DBRAPublicKeyParameters pk = (DBRAPublicKeyParameters) publicKey;
             return new CryptoResource(
-                    policy[hveParameters.getAttributesLengthInBytes()],
-                    ct,
+                    policy[policy.length - 1], // depth
+                    ct, // resource
                     hibeEncrypt(
                             pk.getHibePk(),
-                            hveEncrypt(pk.getHvePk(), key.getEncoded(), policy),
-                            policy[hveParameters.getAttributesLengthInBytes()]
-                    )
+                            hveEncrypt(pk.getHvePk(), key.getEncoded(), Arrays.copyOf(policy, policy.length - 1)),
+                            policy[policy.length - 1]
+                    ) // key
             );
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -135,8 +130,10 @@ public class DBRACryptoInterface implements CryptoInterface {
             DBRASecretKeyParameters sk = (DBRASecretKeyParameters) secretKey;
             byte[] keyMaterial = hveDecrypt(
                     sk.getHveSk(),
-                    hibeDecrypt(sk.getHibeSk(), resource.getResource())
+                    hibeDecrypt(sk.getHibeSk(), resource.getKey())
             );
+
+//            System.out.println("DECRYPT KEY " + Arrays.toString(keyMaterial));
 
             // Decrypt
             SecretKeySpec key = new SecretKeySpec(keyMaterial, "AES");
@@ -153,10 +150,6 @@ public class DBRACryptoInterface implements CryptoInterface {
     }
 
 
-    public HVEIP08Parameters getHveParameters() {
-        return hveParameters;
-    }
-
 
     protected void initSymmetricKeyGenerator() {
         try {
@@ -169,47 +162,60 @@ public class DBRACryptoInterface implements CryptoInterface {
         }
     }
 
-    protected void initHVE(int n, String curve) {
-        HVEIP08ParametersGenerator paramGen = new HVEIP08ParametersGenerator();
-        paramGen.init(n, PairingFactory.getInstance().loadCurveParameters(curve));
-        hveParameters = paramGen.generateParameters();
-    }
 
 
-    protected byte[] hveEncrypt(CipherParameters publicKey, byte[] data, int[] attributes) {
-        byte[] ct;
+    public byte[] hveEncrypt(CipherParameters publicKey, byte[] data, int[] attributes) {
+//        System.out.println("HVE.ENC.IN : " + Arrays.toString(data));
         try {
-            AsymmetricBlockCipher engine = new MultiBlockAsymmetricBlockCipher(
-                    new HVEIP08Engine(),
-                    new ZeroBytePadding()
+            KEMCipher engine = new KEMCipher(Cipher.getInstance("AES/ECB/PKCS7Padding", "BC"), new HVEIP08KEMEngine());
+            byte[] encapsulation = engine.init(true,
+                    new HVEIP08EncryptionParameters(
+                            (HVEIP08PublicKeyParameters) publicKey,
+                            attributes
+                    )
             );
-            engine.init(true, new HVEIP08EncryptionParameters((HVEIP08PublicKeyParameters) publicKey, attributes));
-            ct = engine.processBlock(data, 0, data.length);
-        } catch (InvalidCipherTextException e) {
+            byte[] ct = engine.doFinal(data);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            DataOutput dataOutput = new DataOutputStream(out);
+            dataOutput.writeInt(encapsulation.length);
+            dataOutput.write(encapsulation);
+            dataOutput.write(ct);
+
+            byte[] result = out.toByteArray();
+//            System.out.println("HVE.ENC.OUT : " + Arrays.toString(result));
+            return result;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return ct;
     }
 
-    protected byte[] hveDecrypt(CipherParameters secretKey, byte[] ct) {
-        byte[] data;
+    public byte[] hveDecrypt(CipherParameters secretKey, byte[] ct) {
+//        System.out.println("HVE.DEC.IN : " + Arrays.toString(ct));
+
         try {
-            AsymmetricBlockCipher engine = new MultiBlockAsymmetricBlockCipher(
-                    new HVEIP08Engine(),
-                    new ZeroBytePadding()
-            );
-            engine.init(false, secretKey);
-            data = engine.processBlock(ct, 0, ct.length);
-        } catch (InvalidCipherTextException e) {
+            // Extract encapsulation
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(ct));
+            int encapsLength = in.readInt();
+            byte[] encapsulation = new byte[encapsLength];
+            in.readFully(encapsulation);
+            byte[] ciphertext = new byte[ct.length - 4 - encapsLength];
+            in.readFully(ciphertext);
+
+            KEMCipher kemCipher = new KEMCipher(Cipher.getInstance("AES/ECB/PKCS7Padding", "BC"), new HVEIP08KEMEngine());
+            kemCipher.init(false, new KEMCipherDecryptionParameters(secretKey, encapsulation));
+
+            // Decrypt
+            return kemCipher.doFinal(ciphertext);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        return data;
     }
 
-    protected byte[] hibeEncrypt(CipherParameters publicKey, byte[] data, int depth) {
+
+    public byte[] hibeEncrypt(CipherParameters publicKey, byte[] data, int depth) {
+//        System.out.println("HIBE.ENC.IN : " + Arrays.toString(data));
         // Encrypt
-        byte[] ct;
         try {
             AHIBEDIP10PublicKeyParameters pk = (AHIBEDIP10PublicKeyParameters) publicKey;
 
@@ -222,35 +228,43 @@ public class DBRACryptoInterface implements CryptoInterface {
                 ids[i] = one;
             }
 
-            // Enc
-            AsymmetricBlockCipher engine = new MultiBlockAsymmetricBlockCipher(
-                    new AHIBEDIP10Engine(),
-                    new ZeroBytePadding()
-            );
-            engine.init(true, new AHIBEDIP10EncryptionParameters(pk, ids));
-            ct = engine.processBlock(data, 0, data.length);
-        } catch (InvalidCipherTextException e) {
+            KEMCipher engine = new KEMCipher(Cipher.getInstance("AES/ECB/PKCS7Padding", "BC"), new AHIBEDIP10KEMEngine());
+            byte[] encapsulation = engine.init(true, new AHIBEDIP10EncryptionParameters(pk, ids));
+            byte[] ct = engine.doFinal(data);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            DataOutput dataOutput = new DataOutputStream(out);
+            dataOutput.writeInt(encapsulation.length);
+            dataOutput.write(encapsulation);
+            dataOutput.write(ct);
+
+            byte[] result = out.toByteArray();
+//            System.out.println("HIBE.ENC.OUT : " + Arrays.toString(result));
+            return result;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        return ct;
     }
 
-    protected byte[] hibeDecrypt(CipherParameters secretKey, byte[] ct) {
-        byte[] data;
+    public byte[] hibeDecrypt(CipherParameters secretKey, byte[] ct) {
+//        System.out.println("HIBE.DEC.IN : " + Arrays.toString(ct));
         try {
-            AsymmetricBlockCipher engine = new MultiBlockAsymmetricBlockCipher(
-                    new AHIBEDIP10Engine(),
-                    new ZeroBytePadding()
-            );
-            engine.init(false, secretKey);
-            data = engine.processBlock(ct, 0, ct.length);
-        } catch (InvalidCipherTextException e) {
+            // Extract encapsulation
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(ct));
+            int encapsLength = in.readInt();
+            byte[] encapsulation = new byte[encapsLength];
+            in.readFully(encapsulation);
+            byte[] ciphertext = new byte[ct.length - 4 - encapsLength];
+            in.readFully(ciphertext);
+
+            KEMCipher kemCipher = new KEMCipher(Cipher.getInstance("AES/ECB/PKCS7Padding", "BC"), new AHIBEDIP10KEMEngine());
+            kemCipher.init(false, new KEMCipherDecryptionParameters(secretKey, encapsulation));
+
+            // Decrypt
+            return kemCipher.doFinal(ciphertext);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        return data;
     }
-
 
 }

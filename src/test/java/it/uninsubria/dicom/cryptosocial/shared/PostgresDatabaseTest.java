@@ -1,17 +1,12 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08Parameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PrivateKeyParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameters;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,6 +19,7 @@ public class PostgresDatabaseTest {
 	@After
 	public void tearDown() throws Exception {}
 	
+	/*
 	@Test
 	public void testHHVESerialization() throws Exception {		
 		AsymmetricCipherKeyPair keyPair = CryptoInterfaceFB.getInstance().generateKeyPair();
@@ -90,9 +86,10 @@ public class PostgresDatabaseTest {
 			}
 		}
 	}
+	*/
 	
 	private boolean checkParameters(HVEIP08Parameters p1, HVEIP08Parameters p2) {
-	    assertThat(p1.getCurveParams(), is(equalTo(p2.getCurveParams())));
+	    assertThat(p1.getCurveParameters(), is(equalTo(p2.getCurveParameters())));
 	    assertThat(p1.getG(), is(equalTo(p2.getG())));
 	    assertThat(p1.getElementPowG(), is(equalTo(p2.getElementPowG())));
 	    assertThat(p1.getN(), is(equalTo(p2.getN())));

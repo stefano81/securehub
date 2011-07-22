@@ -20,15 +20,16 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 
 import com.restfb.DefaultFacebookClient;
 import com.restfb.FacebookClient;
 import com.restfb.types.User;
 
-public class PostgresDatabase implements ServerDatabase, ClientDatabase {
-	private static PostgresDatabase database;
-	private static Logger logger = Logger.getLogger(PostgresDatabase.class);
+public class MySQLDatabase implements ServerDatabase, ClientDatabase {
+	private static MySQLDatabase database;
+	private static Logger logger = Logger.getLogger(MySQLDatabase.class);
 	
 	private ConnectionPool pool;
 	
@@ -51,11 +52,11 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	private final String ownerFriendQuery = "SELECT user2 FROM friendships WHERE user1 = ?";
 	 
 	// KeyGeneration
-	private final String getUserKeyQuery = "SELECT private_key FROM users WHERE uid = ?";
+	private final String getUserKeyQuery = "SELECT asymmetric_key FROM users WHERE uid = ?";
 	private final String insertKey = "INSERT INTO keys (owner, emitter, key) VALUES (?, ?, ?)";
 
-	private PostgresDatabase() {		
-		pool = new DatabasePoolImplPostgres(CommonProperties.getInstance());
+	private MySQLDatabase() {		
+		pool = new DatabasePoolImplMySQL(CommonProperties.getInstance());
 	}
 
 	
@@ -63,7 +64,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	
 	public synchronized static ServerDatabase getServerInstance() {
 		if (null == database)
-			database = new PostgresDatabase();
+			database = new MySQLDatabase();
 		
 		return database;
 	}	
@@ -171,7 +172,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	
 	public synchronized static ClientDatabase getClientInstance() {
 		if (null == database)
-			database = new PostgresDatabase();
+			database = new MySQLDatabase();
 		
 		return database;
 	}
@@ -185,7 +186,6 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			PreparedStatement updateKeysStatement = connection.prepareStatement(updateKeysQuery);
 			
 			updateKeysStatement.setBytes(1,	convertKeysToBytes(keys));
-			//updateKeysStatement.setBytes(2,	convertKeysToBytes(keys.getPrivate()));
 			updateKeysStatement.setString(3, uid);
 	
 			updateKeysStatement.executeUpdate();
@@ -447,7 +447,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			ResultSet getUserKeyRS = getUserKeyStatement.executeQuery();
 			
 			if (getUserKeyRS.next()) {
-				ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(getUserKeyRS.getBytes("private_key")));
+				ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(getUserKeyRS.getBytes("asymmetric_key")));
 				privateKey = (CipherParameters) ois.readObject();
 			}
 		} catch (ConnectionPoolException e) {
@@ -472,16 +472,16 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 	public List<String> getFriendsList(String uid) {
 		logger.debug("Retrieving friends");
 		
-		FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
+		List<String> friends = new LinkedList<String>();
+		
+		/*FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
 		List<User> users = fbClient.fetchConnection("me/friends", User.class).getData();
 		
 		logger.debug("Processing " + users.size() + " friends");
 		
-		List<String> friends = new LinkedList<String>();
-		
 		for (User user: users) {
 			friends.add(user.getId());
-		}
+		}*/
 		
 		return friends;
 	}
