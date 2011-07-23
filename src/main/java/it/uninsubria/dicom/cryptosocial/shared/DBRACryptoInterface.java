@@ -3,12 +3,12 @@ package it.uninsubria.dicom.cryptosocial.shared;
 import it.unisa.dia.gas.crypto.engines.MultiBlockAsymmetricBlockCipher;
 import it.unisa.dia.gas.crypto.engines.kem.KEMCipher;
 import it.unisa.dia.gas.crypto.engines.kem.KEMCipherDecryptionParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HVEIP08Engine;
+//import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HVEIP08Engine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.engines.HVEIP08KEMEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08ParametersGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.generators.HVEIP08SecretKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.*;
-import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.engines.AHIBEDIP10Engine;
+//import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.engines.AHIBEDIP10Engine;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.engines.AHIBEDIP10KEMEngine;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.generators.AHIBEDIP10SecretKeyGenerator;
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.*;
@@ -41,7 +41,7 @@ public class DBRACryptoInterface implements CryptoInterface {
 
 
     public CipherParameters keyGeneration(CipherParameters masterSecretKey, int[] policy) {
-        DBRAKeyPairParameters keyPair = (DBRAKeyPairParameters) masterSecretKey;
+        /*DBRAKeyPairParameters keyPair = (DBRAKeyPairParameters) masterSecretKey;
 
         // generate hve key
         HVEIP08SecretKeyGenerator hveKeyGenerator = new HVEIP08SecretKeyGenerator();
@@ -73,11 +73,12 @@ public class DBRACryptoInterface implements CryptoInterface {
         CipherParameters hibeSk = hibeGenerator.generateKey();
 
         // Return secret key
-        return new DBRASecretKeyParameters(hveSk, hibeSk);
+        return new DBRASecretKeyParameters(hveSk, hibeSk);*/
+    	return null; // FIXME
     }
 
     public CipherParameters keyDelegation(CipherParameters publicKey, CipherParameters secretKey, int depth) {
-        AHIBEDIP10PublicKeyParameters pk = (AHIBEDIP10PublicKeyParameters) ((DBRAPublicKeyParameters) publicKey).getHibePk();
+        /*AHIBEDIP10PublicKeyParameters pk = (AHIBEDIP10PublicKeyParameters) ((DBRAPublicKeyParameters) publicKey).getHibePk();
         Pairing pairing = PairingFactory.getPairing(pk.getCurveParameters());
 
         DBRASecretKeyParameters sk = (DBRASecretKeyParameters) secretKey;
@@ -92,11 +93,13 @@ public class DBRACryptoInterface implements CryptoInterface {
             hibeSk = (AHIBEDIP10SecretKeyParameters) generator.generateKey();
         }
 
-        return new DBRASecretKeyParameters(sk.getHveSk(), hibeSk);
+        return new DBRASecretKeyParameters(sk.getHveSk(), hibeSk);*/
+    	return null; // FIXME
     }
 
 
     public Resource encrypt(CipherParameters publicKey, int[] policy, byte[] resource) {
+    	/*
         try {
             // Encrypt resource using ephemeral symmetric key
             Key key = scKeyGen.generateKey();
@@ -122,9 +125,13 @@ public class DBRACryptoInterface implements CryptoInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        */
+    	
+    	return null; // FIXME
     }
 
     public byte[] decrypt(CipherParameters secretKey, Resource resource) {
+    	/*
         try {
             // Recover symmetric key
             DBRASecretKeyParameters sk = (DBRASecretKeyParameters) secretKey;
@@ -147,6 +154,8 @@ public class DBRACryptoInterface implements CryptoInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        */
+    	return null;  //FIXME
     }
 
 
@@ -192,7 +201,7 @@ public class DBRACryptoInterface implements CryptoInterface {
 
     public byte[] hveDecrypt(CipherParameters secretKey, byte[] ct) {
 //        System.out.println("HVE.DEC.IN : " + Arrays.toString(ct));
-
+    	/*
         try {
             // Extract encapsulation
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(ct));
@@ -209,7 +218,9 @@ public class DBRACryptoInterface implements CryptoInterface {
             return kemCipher.doFinal(ciphertext);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
+        }*/
+    	
+    	return null; // FIXME
     }
 
 
@@ -247,6 +258,7 @@ public class DBRACryptoInterface implements CryptoInterface {
     }
 
     public byte[] hibeDecrypt(CipherParameters secretKey, byte[] ct) {
+    	/*
 //        System.out.println("HIBE.DEC.IN : " + Arrays.toString(ct));
         try {
             // Extract encapsulation
@@ -265,6 +277,9 @@ public class DBRACryptoInterface implements CryptoInterface {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        */
+    	
+    	return null; // FIXME
     }
 
 }

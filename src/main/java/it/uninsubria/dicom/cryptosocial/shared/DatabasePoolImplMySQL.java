@@ -23,7 +23,7 @@ public class DatabasePoolImplMySQL implements ConnectionPool {
 			e.printStackTrace();
 		}
 
-		dbURL = properties.getConnectionURL();
+		//dbURL = properties.getConnectionURL();
 	}
 	
 	@Override
@@ -52,7 +52,7 @@ public class DatabasePoolImplMySQL implements ConnectionPool {
 
 	private Connection newConnection() throws ConnectionPoolException {
 		try {
-			return DriverManager.getConnection(dbURL, properties.getUsername(), properties.getPassword());
+			return DriverManager.getConnection(properties.getConnectionURL(), properties.getUsername(), properties.getPassword());
 		} catch (SQLException e) {
 			throw new ConnectionPoolException("Unable to create connection");
 		}

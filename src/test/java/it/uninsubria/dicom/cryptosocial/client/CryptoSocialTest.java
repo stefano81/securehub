@@ -70,8 +70,8 @@ public class CryptoSocialTest {
 		}};
 		
 		context.checking(new Expectations() {{
-			oneOf(database).updateKeys(with(equalTo(UID)), with(equal(keyPair)));
-			atLeast(1).of(database).existsUser(with(any(String.class))); will(returnValue(true));
+			//oneOf(database).updateKeys(with(equalTo(UID)), with(equal(keyPair)));
+			atLeast(1).of(database).isUserRegistered(with(any(String.class))); will(returnValue(true));
 			atLeast(1).of(database).insertFriendship(with(any(String.class)), with(equal(UID)));
 			allowing(database).insertFriendship(with(equal(UID)), with(any(String.class)));
 			oneOf(database).addUser(with(equal(UID)));

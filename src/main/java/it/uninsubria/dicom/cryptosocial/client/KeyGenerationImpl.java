@@ -99,6 +99,8 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 	
 	@Override
 	public void run() {
+		return;
+		/*
 		while(true) {
 			synchronized(toGenerate) {
 				try {
@@ -142,7 +144,7 @@ public class KeyGenerationImpl extends Thread implements KeyGeneration {
 			} else {
 				logger.error("Private Key not found");
 			}
-		}
+		}*/
 	}
 
 	protected void propagate(String receiver, String next, CipherParameters	key) {

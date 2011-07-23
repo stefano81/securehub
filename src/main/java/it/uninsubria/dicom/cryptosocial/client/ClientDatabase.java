@@ -8,7 +8,7 @@ import org.bouncycastle.crypto.CipherParameters;
 
 public interface ClientDatabase {
 	public void updateKeys(String uid, CipherParameters keys);
-	public boolean existsUser(String id);
+	public boolean isUserRegistered(String id);
 	public void insertFriendship(String uid, String id);
 	public Iterator<CipherParameters> enumerateUserKeys(String uid);
 	public CipherParameters getPublicKey(String uid);

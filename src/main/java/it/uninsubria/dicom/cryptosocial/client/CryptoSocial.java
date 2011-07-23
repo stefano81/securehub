@@ -4,38 +4,30 @@ import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
 import it.uninsubria.dicom.cryptosocial.server.ResourceStorerFB;
 import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
-import it.uninsubria.dicom.cryptosocial.shared.DBRACryptoInterface;
-import it.uninsubria.dicom.cryptosocial.shared.DBRAKeyPairParameters;
-import it.uninsubria.dicom.cryptosocial.shared.DBRASetup;
 import it.uninsubria.dicom.cryptosocial.shared.MySQLDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.PostgresDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.Resource;
 import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
+import it.uninsubria.dicom.cryptosocial.shared.dummy.DummyCipherParameters;
+import it.uninsubria.dicom.cryptosocial.shared.dummy.DummyCryptoInterface;
 
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.Logger;
 import org.bouncycastle.crypto.CipherParameters;
+import org.jboss.resteasy.annotations.providers.multipart.MultipartForm;
 
 @Path("cryptosocial/")
 public class CryptoSocial {
@@ -55,8 +47,9 @@ public class CryptoSocial {
 				//PostgresDatabase.getClientInstance(),
 				MySQLDatabase.getClientInstance(),
 				 //CryptoInterfaceFB.getInstance(),
-				new DBRACryptoInterface(),
-				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), new DBRACryptoInterface()),
+				//new DBRACryptoInterface(),
+				new DummyCryptoInterface(),
+				 KeyGenerationImpl.getInstance(PostgresDatabase.getClientInstance(), new DummyCryptoInterface()),
 				 ResourceStorerFB.getInstance());
 	}
 	
@@ -74,7 +67,8 @@ public class CryptoSocial {
 		logger.debug("user/" + uid);
 
 		// generate user keys
-		DBRAKeyPairParameters keys = DBRASetup.setup(properties.getLength(), properties.getCurveParamsLocation(), properties.getLength(), properties.getLength()); //cryptoInterface.generateKeyPair();
+		//DBRAKeyPairParameters keys = DBRASetup.setup(properties.getLength(), properties.getCurveParamsLocation(), properties.getLength(), properties.getLength()); //cryptoInterface.generateKeyPair();
+		CipherParameters keys = new DummyCipherParameters(uid); 
 		
 		logger.debug("Key pair generated");
 		
@@ -93,7 +87,7 @@ public class CryptoSocial {
 		for (String friend : friends) {
 			logger.debug("Processing: " + friend);
 			
-			if (database.existsUser(friend)) {
+			if (database.isUserRegistered(friend)) {
 				// insert relationship (u1, u2)
 				database.insertFriendship(uid, friend);
 				
@@ -103,7 +97,7 @@ public class CryptoSocial {
 				// insert u2, u1 for key propagation
 				keyGeneration.propagate(friend, uid);
 			} else {
-				logger.debug("She/he is not a registered user");
+				logger.debug("The user " + uid + " is not registered in the application");
 			}
 		}
 	}
@@ -181,7 +175,12 @@ public class CryptoSocial {
 
 	@POST
 	@Path("resource")
-	public void publishResource(@Context HttpServletRequest req) throws Exception {
+	@Consumes("multipart/form-data")
+	public void publishResource(@MultipartForm FileUploadForm form) {
+		
+		
+	}
+	/*public void publishResource(@Context HttpServletRequest req) throws Exception {
 
 		FileItemFactory factory = new DiskFileItemFactory();
 		ServletFileUpload upload = new ServletFileUpload(factory);
@@ -195,7 +194,7 @@ public class CryptoSocial {
 		String uid = null;
 		int[] policy = {1,1,1,1,1,1,1,1,1,1,
 				1,1,1,1,1,1,1,1,1,1,
-				1,1,1,1,1,1,1,1,1,1}; // TMCH & for debug
+				1,1,1,1,1,1,1,1,1,1}; // TMCH && for debug
 
 		for (FileItem item : items) {
 			if (item.isFormField()) {
@@ -245,7 +244,7 @@ public class CryptoSocial {
 		} else {
 			throw new WebApplicationException();
 		}
-	}
+	}*/
 	
 	private int[] parsePolicy(String string) {
 		int[] policy = new int[properties.getLength()];

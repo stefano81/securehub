@@ -7,8 +7,8 @@ import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.AHIBEDIP10MasterSecretKe
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.AHIBEDIP10PublicKeyParameters;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
-import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput;
-import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectOutput;
+//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput;
+//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectOutput;
 import org.bouncycastle.crypto.CipherParameters;
 
 import java.io.Externalizable;
@@ -18,8 +18,8 @@ import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
 
-import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.G1;
-import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.Zr;
+//import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.G1;
+//import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.Zr;
 
 public class DBRAMasterSecretKeyParameters implements CipherParameters, Externalizable {
     protected CipherParameters hveSk;
@@ -44,7 +44,7 @@ public class DBRAMasterSecretKeyParameters implements CipherParameters, External
     }
 
     public void writeExternal(ObjectOutput out) throws IOException {
-        ElementObjectOutput eout = new ElementObjectOutput(out);
+        /*ElementObjectOutput eout = new ElementObjectOutput(out);
 
         // Write HVE key
         HVEIP08MasterSecretKeyParameters hve = (HVEIP08MasterSecretKeyParameters) hveSk;
@@ -70,11 +70,11 @@ public class DBRAMasterSecretKeyParameters implements CipherParameters, External
         AHIBEDIP10MasterSecretKeyParameters hibe = (AHIBEDIP10MasterSecretKeyParameters) hibeSk;
         eout.writeObject(hibe.getCurveParameters());
         eout.writeElement(hibe.getX1());
-        eout.writeElement(hibe.getAlpha());
+        eout.writeElement(hibe.getAlpha());*/
     }
 
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        ElementObjectInput ein = new ElementObjectInput(in);
+        /*ElementObjectInput ein = new ElementObjectInput(in);
 
         // Read HVE
         CurveParameters curveParameters = ein.readCurveParameters();
@@ -111,6 +111,6 @@ public class DBRAMasterSecretKeyParameters implements CipherParameters, External
         Element alpha = ein.readElement(Zr);
 
         AHIBEDIP10MasterSecretKeyParameters hibe = new AHIBEDIP10MasterSecretKeyParameters(curveParameters, X1, alpha);
-        this.hibeSk = hibe;
+        this.hibeSk = hibe;*/
     }
 }

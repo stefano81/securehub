@@ -248,7 +248,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 
 
 	@Override
-	public boolean existsUser(String uid) {
+	public boolean isUserRegistered(String uid) {
 		logger.debug("Checking existence for " + uid);
 		
 		try {

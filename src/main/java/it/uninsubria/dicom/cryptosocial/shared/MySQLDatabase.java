@@ -7,6 +7,7 @@ import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameter
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
@@ -34,13 +35,13 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 	private ConnectionPool pool;
 	
 	// user registration
-	private final String updateKeysQuery = "UPDATE users SET asymmetric_key = ? WHERE uid = ?";
+	private final String updateKeysQuery = "INSERT INTO users (asymmetric_key, uid) VALUES (?, ?) ON DUPLICATE KEY UPDATE asymmetric_key  = VALUES(asymmetric_key)";
 	private final String getTokenQuery = "SELECT access_token FROM users WHERE uid = ?";
 	private final String checkUserQuery = "SELECT uid FROM users where uid = ?";
 	private final String insertFrienshipQuery = "INSERT INTO friendships (user1, user2) VALUES (?, ?)";
 
 	// retrieve resource
-	private final String listKeysQuery = "SELECT key FROM keys WHERE owner = ?";
+	private final String listKeysQuery = "SELECT access_key FROM access_keys WHERE owner = ?";
 	private final String getResourceQuery = "SELECT resource, privatekey FROM resources WHERE id = ?";
 
 	// search resource
@@ -48,12 +49,12 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 
 	// publish resource
 	private final String insertResourceQuery = "INSERT INTO resources (resource, privatekey, name, owner) VALUES (?, ?, ?, ?)";
-	private final String ownerKeysQuery = "SELECT private_key, public_key FROM users WHERE uid = ?";
+	private final String ownerKeysQuery = "SELECT asymmetric_key FROM users WHERE uid = ?";
 	private final String ownerFriendQuery = "SELECT user2 FROM friendships WHERE user1 = ?";
 	 
 	// KeyGeneration
 	private final String getUserKeyQuery = "SELECT asymmetric_key FROM users WHERE uid = ?";
-	private final String insertKey = "INSERT INTO keys (owner, emitter, key) VALUES (?, ?, ?)";
+	private final String insertKey = "INSERT INTO access_keys (owner, emitter, access_key) VALUES (?, ?, ?)";
 
 	private MySQLDatabase() {		
 		pool = new DatabasePoolImplMySQL(CommonProperties.getInstance());
@@ -180,27 +181,28 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 
 	@Override
 	public void updateKeys(String uid, CipherParameters keys) {
+		logger.info("Updating key for user " + uid);
+		
 		try {
 			Connection connection = pool.getConnection();
 		
+			
+			
 			PreparedStatement updateKeysStatement = connection.prepareStatement(updateKeysQuery);
 			
 			updateKeysStatement.setBytes(1,	convertKeysToBytes(keys));
-			updateKeysStatement.setString(3, uid);
+			updateKeysStatement.setString(2, uid);
 	
 			updateKeysStatement.executeUpdate();
 		} catch (ConnectionPoolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage());
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.debug(e.getMessage());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage());
 		}
 	}
-	
+
 	protected static byte[] convertKeysToBytes(CipherParameters cipherParameters) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -213,7 +215,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 
 
 	protected String getAccessToken(String uid) {
-		logger.debug("Retrieving access token for " + uid);
+		logger.info("Retrieving access token for " + uid);
 		
 		String accessToken = null;
 		
@@ -248,7 +250,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 
 
 	@Override
-	public boolean existsUser(String uid) {
+	public boolean isUserRegistered(String uid) {
 		logger.debug("Checking existence for " + uid);
 		
 		try {
@@ -261,7 +263,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 			ResultSet rs = checkUserStatement.executeQuery();
 			
 			if (rs.next()) {
-				logger.debug(uid + " is registered");
+				logger.info(uid + " is registered");
 				return true;
 			}
 		} catch (ConnectionPoolException e) {
@@ -272,14 +274,14 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 			e.printStackTrace();
 		}
 		
-		logger.debug(uid + "is not registered");
+		logger.info(uid + "is not registered");
 		
 		return false;
 	}
 
 	@Override
 	public void insertFriendship(String user1, String user2) {
-		logger.debug("Inserting friendship (" + user1 + ", " + user2 + ")");
+		logger.info("Inserting friendship (" + user1 + ", " + user2 + ")");
 		
 		try {
 			Connection connection = pool.getConnection();
@@ -491,9 +493,9 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 	public void addUser(String uid) {
 		logger.debug("Adding user data for " + uid);
 		
-		FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
+		/*FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
 		User userData = fbClient.fetchObject("me", User.class);
-		
+		*/
 		// TODO
 	}
 }

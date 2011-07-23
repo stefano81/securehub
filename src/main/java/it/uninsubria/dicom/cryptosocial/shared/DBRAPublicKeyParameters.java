@@ -6,8 +6,8 @@ import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08PublicKeyParameter
 import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.AHIBEDIP10PublicKeyParameters;
 import it.unisa.dia.gas.jpbc.CurveParameters;
 import it.unisa.dia.gas.jpbc.Element;
-import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput;
-import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectOutput;
+//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput;
+//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectOutput;
 import org.bouncycastle.crypto.CipherParameters;
 
 import java.io.Externalizable;
@@ -18,8 +18,8 @@ import java.lang.annotation.ElementType;
 import java.util.ArrayList;
 import java.util.List;
 
-import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.G1;
-import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.GT;
+//import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.G1;
+//import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.GT;
 
 public class DBRAPublicKeyParameters implements CipherParameters, Externalizable {
     protected CipherParameters hvePk;
@@ -45,7 +45,7 @@ public class DBRAPublicKeyParameters implements CipherParameters, Externalizable
 
 
     public void writeExternal(ObjectOutput out) throws IOException {
-        ElementObjectOutput eout = new ElementObjectOutput(out);
+        /*ElementObjectOutput eout = new ElementObjectOutput(out);
 
         // Write HVE key
         HVEIP08PublicKeyParameters hve = (HVEIP08PublicKeyParameters) hvePk;
@@ -76,11 +76,11 @@ public class DBRAPublicKeyParameters implements CipherParameters, Externalizable
         eout.writeElement(hibe.getY4());
         eout.writeElement(hibe.getT());
         eout.writeElements(hibe.getUs());
-        eout.writeElement(hibe.getOmega());
+        eout.writeElement(hibe.getOmega());*/
     }
 
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        ElementObjectInput ein = new ElementObjectInput(in);
+        /*ElementObjectInput ein = new ElementObjectInput(in);
 
         // Read HVE
         CurveParameters curveParameters = ein.readCurveParameters();
@@ -122,6 +122,6 @@ public class DBRAPublicKeyParameters implements CipherParameters, Externalizable
         Element Omega = ein.readElement(GT);
 
         AHIBEDIP10PublicKeyParameters hibe = new AHIBEDIP10PublicKeyParameters(curveParameters, Y1, Y3, Y4, T, Us, Omega);
-        this.hibePk = hibe;
+        this.hibePk = hibe;*/
     }
 }
