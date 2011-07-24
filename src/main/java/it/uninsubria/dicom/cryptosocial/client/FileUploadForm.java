@@ -12,6 +12,14 @@ class FileUploadForm {
     @FormParam("filename")
     @PartType("text/plain")
 	private String filename;
+    
+    @FormParam("uid")
+    @PartType("text/plain")
+    private String uid;
+
+    @FormParam("policy")
+    @PartType("text/plain")
+	private String policy;
 
     public FileUploadForm() {}
     
@@ -32,4 +40,20 @@ class FileUploadForm {
     public void setFileData(final byte[] filedata) {
         this.filedata = filedata;
     }
+
+	public String getUid() {
+		return uid;
+	}
+
+	public void setUid(String uid) {
+		this.uid = uid;
+	}
+
+	public String getPolicy() {
+		return policy;
+	}
+	
+	public void setPolicy(String policy) {
+		this.policy = policy;
+	}
 }

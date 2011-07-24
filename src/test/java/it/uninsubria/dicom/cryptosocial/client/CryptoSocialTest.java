@@ -31,7 +31,7 @@ public class CryptoSocialTest {
 	
 	private static String UID = "pippo";
 	private static Integer RID = 123456789;
-	private static String AT = "106571229431832|133bad2d4f8a28a0f169402d.1-1578452822|7n7g67rSoAWRP20bEXg4mEZrV2Q";
+	//private static String AT = "106571229431832|133bad2d4f8a28a0f169402d.1-1578452822|7n7g67rSoAWRP20bEXg4mEZrV2Q";
 	private static String QUERY = "foo.bar";
 	
 	private CryptoSocial cs;
@@ -41,7 +41,7 @@ public class CryptoSocialTest {
 	private ClientDatabase	database;
 	private CryptoInterface	cryptoInterface;
 	private KeyGeneration	keyGeneration;
-	private AsymmetricCipherKeyPair keyPair;
+	private CipherParameters keyPair;
 	private EncryptedResource resource = context.mock(EncryptedResource.class);
 	
 	@Before
@@ -62,7 +62,8 @@ public class CryptoSocialTest {
 
 	@Test
 	public void testRegisterUser() {
-		keyPair = context.mock(AsymmetricCipherKeyPair.class);
+		keyPair = context.mock(CipherParameters.class);
+		
 		@SuppressWarnings("serial")
 		final List<String> friendList = new ArrayList<String>() {{
 			add("paperino");
@@ -70,12 +71,16 @@ public class CryptoSocialTest {
 		}};
 		
 		context.checking(new Expectations() {{
-			//oneOf(database).updateKeys(with(equalTo(UID)), with(equal(keyPair)));
+			oneOf(database).updateKeys(with(equal(UID)), with(any(CipherParameters.class)));
+			oneOf(database).addUser(with(equal(UID)));
+			oneOf(database).getFriendsList(with(equal(UID))); will(returnValue(friendList));
+			
 			atLeast(1).of(database).isUserRegistered(with(any(String.class))); will(returnValue(true));
 			atLeast(1).of(database).insertFriendship(with(any(String.class)), with(equal(UID)));
 			allowing(database).insertFriendship(with(equal(UID)), with(any(String.class)));
-			oneOf(database).addUser(with(equal(UID)));
-			oneOf(database).getFriendsList(with(equal(AT))); will(returnValue(friendList));
+			
+			
+			
 			atLeast(1).of(keyGeneration).propagate(with(any(String.class)), with(equal(UID)));
 		}});
 		
@@ -143,7 +148,16 @@ public class CryptoSocialTest {
 
 	@Test
 	public void testPublishResource() {
-		fail("Not yet implemented"); // TODO
+		final FileUploadForm form = context.mock(FileUploadForm.class);
+		
+		context.checking(new Expectations() {{
+			allowing(form).getUid(); will(returnValue(UID));
+			allowing(form).getFileData(); will(returnValue(null));
+			
+			oneOf(database).getPublicKey(with(equal(UID))); will(returnValue(null));
+		}});
+		
+		cs.publishResource(form);
 	}
 
 }

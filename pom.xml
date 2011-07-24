@@ -5,7 +5,7 @@
 	<artifactId>CryptoSocial</artifactId>
 	<packaging>war</packaging>
 	<version>1.0-SNAPSHOT</version>
-	<name>CryptoSocial</name>
+	<name>SecureHUB</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
