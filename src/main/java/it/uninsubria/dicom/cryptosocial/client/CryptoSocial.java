@@ -24,6 +24,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.crypto.CipherParameters;
@@ -177,9 +178,36 @@ public class CryptoSocial {
 	@Path("resource")
 	@Consumes("multipart/form-data")
 	public void publishResource(@MultipartForm FileUploadForm form) {
-		
-		
+		if (null != form.getUid()) {
+			logger.debug("Retrieving public key for user " + form.getUid());
+			
+			CipherParameters publicKey = database.getPublicKey(form.getUid());
+
+			if (null != publicKey) {
+				logger.debug("Public key not null");
+				
+				Resource res = cryptoInterface.encrypt(publicKey, parsePolicy(form.getPolicy()), form.getFileData());
+				
+				logger.debug("Inserting");
+				ResourceID rid = repository.storeResource(form.getUid(), form.getFileName(), res);  
+				
+				logger.debug("Inserted resource id: " + rid.getID());
+				
+				if (null != rid) {
+					Iterator<String> friends = database.getUserFriends(form.getUid());
+					
+					while (friends.hasNext()) {
+						keyGeneration.generate(form.getUid(), friends.next(), parsePolicy(form.getPolicy()));
+					}
+				}
+			} else {
+				//throw new WebApplicationException();
+			}
+		} else {
+			//throw new WebApplicationException();
+		}
 	}
+	
 	/*public void publishResource(@Context HttpServletRequest req) throws Exception {
 
 		FileItemFactory factory = new DiskFileItemFactory();
