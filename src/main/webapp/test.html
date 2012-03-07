@@ -10,12 +10,12 @@
   <body>
     <p>
       <h1>Select the resurce:</h1>
-      <form action="cryptosocial/resource/" method="POST">
+      <form action="cryptosocial/resource/" method="post" enctype="multipart/form-data">
 	<input type="hidden" name="uid" value="1578452822">
 	<table>
-	  <tr><td>Resource name:</td><td><input type="text" name="name" value="TestResource" /></td></tr>
+	  <tr><td>Resource name:</td><td><input type="text" name="filename" value="TestResource" /></td></tr>
 	  <tr><td>Policy:</td><td><input type="text" name="policy" value="1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1" /></td></tr>
-	  <tr><td>Resource:p</td><td><input type="file" name="inputfile" /></td></tr>
+	  <tr><td>Resource:p</td><td><input type="file" name="filedata" /></td></tr>
 	  <tr><td><input type="submit"  /></td><td><input type="reset" /></td></tr>
 	</table>
       </form>

@@ -1,7 +1,6 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import it.uninsubria.dicom.cryptosocial.server.ResourceNotFoundException;
 import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
 import it.uninsubria.dicom.cryptosocial.shared.EncryptedResource;
@@ -11,7 +10,6 @@ import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.CipherParameters;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
@@ -23,6 +21,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static org.hamcrest.Matchers.*;
+
+import static org.junit.Assert.*;
+
 @RunWith(JMock.class)
 public class CryptoSocialTest {
 	private final Mockery context = new JUnit4Mockery() {{
@@ -30,7 +32,7 @@ public class CryptoSocialTest {
 	}};
 	
 	private static String UID = "pippo";
-	private static Integer RID = 123456789;
+	private static Long RID = 123456789l;
 	//private static String AT = "106571229431832|133bad2d4f8a28a0f169402d.1-1578452822|7n7g67rSoAWRP20bEXg4mEZrV2Q";
 	private static String QUERY = "foo.bar";
 	
@@ -88,7 +90,7 @@ public class CryptoSocialTest {
 	}
 
 	@Test
-	public void testRetrieveResourceNotFoundKey() {
+	public void testRetrieveResourceNotFoundKey() throws ResourceNotFoundException, UserNotFoundException {
 		
 		
 		context.checking(new Expectations() {{
@@ -102,7 +104,7 @@ public class CryptoSocialTest {
 	}
 	
 	@Test
-	public void testRetrieveResourceNotFoundResource() {
+	public void testRetrieveResourceNotFoundResource() throws ResourceNotFoundException, UserNotFoundException {
 		context.checking(new Expectations() {{
 			oneOf(repository).getResource(with(any(ResourceID.class))); will(returnValue(null));
 			allowing(database).enumerateUserKeys(with(equal(UID)));
@@ -114,7 +116,7 @@ public class CryptoSocialTest {
 	}
 	
 	@Test
-	public void testRetrieveResourceFoundKey() {
+	public void testRetrieveResourceFoundKey() throws ResourceNotFoundException {
 		fail("Not implemented yet");
 
 		context.checking(new Expectations() {{
@@ -133,8 +135,8 @@ public class CryptoSocialTest {
 		
 		@SuppressWarnings("serial")
 		final List<ResourceID> res = new ArrayList<ResourceID>() {{
-			add(new ResourceID("pippo", 1));
-			add(new ResourceID("pluto", 2));
+			add(new ResourceID("pippo", 1l));
+			add(new ResourceID("pluto", 2l));
 		}};
 		
 		context.checking(new Expectations() {{
@@ -148,16 +150,7 @@ public class CryptoSocialTest {
 
 	@Test
 	public void testPublishResource() {
-		final FileUploadForm form = context.mock(FileUploadForm.class);
-		
-		context.checking(new Expectations() {{
-			allowing(form).getUid(); will(returnValue(UID));
-			allowing(form).getFileData(); will(returnValue(null));
-			
-			oneOf(database).getPublicKey(with(equal(UID))); will(returnValue(null));
-		}});
-		
-		cs.publishResource(form);
+		fail("Not implemented yet");
 	}
 
 }

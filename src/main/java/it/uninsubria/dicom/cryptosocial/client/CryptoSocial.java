@@ -1,9 +1,13 @@
 package it.uninsubria.dicom.cryptosocial.client;
 
+import it.uninsubria.dicom.cryptosocial.server.ResourceNotFoundException;
 import it.uninsubria.dicom.cryptosocial.server.ResourceRepository;
 import it.uninsubria.dicom.cryptosocial.server.ResourceStorerFB;
 import it.uninsubria.dicom.cryptosocial.shared.CommonProperties;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
+import it.uninsubria.dicom.cryptosocial.shared.DBRAKeyPairParameters;
+import it.uninsubria.dicom.cryptosocial.shared.DBRASetup;
+import it.uninsubria.dicom.cryptosocial.shared.DummyDBInterface;
 import it.uninsubria.dicom.cryptosocial.shared.MySQLDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.PostgresDatabase;
 import it.uninsubria.dicom.cryptosocial.shared.Resource;
@@ -11,8 +15,10 @@ import it.uninsubria.dicom.cryptosocial.shared.ResourceID;
 import it.uninsubria.dicom.cryptosocial.shared.dummy.DummyCipherParameters;
 import it.uninsubria.dicom.cryptosocial.shared.dummy.DummyCryptoInterface;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.List;
@@ -25,10 +31,13 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.crypto.CipherParameters;
-import org.jboss.resteasy.annotations.providers.multipart.MultipartForm;
+
+import com.sun.jersey.multipart.FormDataParam;
 
 @Path("cryptosocial/")
 public class CryptoSocial {
@@ -46,7 +55,8 @@ public class CryptoSocial {
 	public CryptoSocial() throws NoSuchAlgorithmException, FileNotFoundException, IOException, ClassNotFoundException {
 		this(CommonProperties.getInstance(),
 				//PostgresDatabase.getClientInstance(),
-				MySQLDatabase.getClientInstance(),
+				//MySQLDatabase.getClientInstance(),
+				DummyDBInterface.getClientInstance(),
 				 //CryptoInterfaceFB.getInstance(),
 				//new DBRACryptoInterface(),
 				new DummyCryptoInterface(),
@@ -64,12 +74,13 @@ public class CryptoSocial {
 
 	@GET
 	@Path("user/{uid}")
-	public void registerUser(@PathParam("uid") String uid) {
+	@Produces(MediaType.TEXT_PLAIN)
+	public String registerUser(@PathParam("uid") String uid) {
 		logger.debug("user/" + uid);
 
 		// generate user keys
-		//DBRAKeyPairParameters keys = DBRASetup.setup(properties.getLength(), properties.getCurveParamsLocation(), properties.getLength(), properties.getLength()); //cryptoInterface.generateKeyPair();
-		CipherParameters keys = new DummyCipherParameters(uid); 
+		DBRAKeyPairParameters keys = DBRASetup.setup(properties.getLength(), properties.getCurveParamsLocation(), properties.getLength(), properties.getLength());
+		//CipherParameters keys = new DummyCipherParameters(uid); 
 		
 		logger.debug("Key pair generated");
 		
@@ -101,45 +112,52 @@ public class CryptoSocial {
 				logger.debug("The user " + uid + " is not registered in the application");
 			}
 		}
+		
+		return "OK!";
 	}
 
 	@GET
 	@Path("resource/{rid}")
-	@Produces("application/octet-stream")
-	public byte[] retrieveResource(@PathParam("rid") Integer resourceId, @QueryParam("uid") String uid) {
+	@Produces(MediaType.APPLICATION_OCTET_STREAM)
+	public byte[] retrieveResource(@PathParam("rid") Long resourceId, @QueryParam("uid") String uid) {
 
-		Resource resource = (Resource) repository.getResource(new ResourceID(resourceId));
+		Resource resource = null;
+		try {
+			resource = (Resource) repository.getResource(new ResourceID(resourceId));
+		} catch (ResourceNotFoundException e) {
+			logger.info("Resource " + resourceId + " not found");
+			throw new WebApplicationException(Status.NOT_FOUND);
+		}
 		
 		if (null != resource) {
 			// keys
-			Iterator<CipherParameters> listKeys = database.enumerateUserKeys(uid);
-			
-			boolean decrypted = false;
-			
-			CipherParameters key = null;
-			
-			
-			while (listKeys.hasNext()) {
-				key = listKeys.next();
-				
-				/*if (cryptoInterface.testKey(resource, key)) {
-					decrypted = true;
-					break;
-				}*/
-				
+			Iterator<CipherParameters> listKeys;
+			try {
+				listKeys = database.enumerateUserKeys(uid);
+			} catch (UserNotFoundException e1) {
+				logger.info("User " + uid + " not found");
+				throw new WebApplicationException(Status.BAD_REQUEST);
 			}
 			
-			if (decrypted && null != key)
-				return cryptoInterface.decrypt(key, resource);
+			int i = 0;
+			while (listKeys.hasNext()) {
+				CipherParameters key = listKeys.next();
+				
+				try {
+					return cryptoInterface.decrypt(key, resource);
+				} catch (RuntimeException e) {
+					logger.info("Key " + i++ + " failed");
+				}
+			}
 			
 		}
 
-		return null;
+		throw new WebApplicationException(Status.FORBIDDEN);
 	}
 
 	@GET
 	@Path("resource")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_JSON)
 	public String searchResources(@QueryParam("query") String name) {
 
 		StringBuffer resourcesJSON = new StringBuffer("[\n");
@@ -176,86 +194,41 @@ public class CryptoSocial {
 
 	@POST
 	@Path("resource")
-	@Consumes("multipart/form-data")
-	public void publishResource(@MultipartForm FileUploadForm form) {
-		if (null != form.getUid()) {
-			logger.debug("Retrieving public key for user " + form.getUid());
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	public void publishResource(@FormDataParam("uid") String uid, @FormDataParam("policy") String policy, @FormDataParam("filename") String filename, @FormDataParam("filedata") InputStream filedata) {		
+		
+		if (null != uid) {
+			logger.info("Retrieving public key for user " + uid);
 			
-			CipherParameters publicKey = database.getPublicKey(form.getUid());
+			CipherParameters publicKey;
+			try {
+				publicKey = database.getPublicKey(uid);
+			} catch (UserNotFoundException e) {
+				logger.info("User not found: " + uid);
+				throw new WebApplicationException(Status.BAD_REQUEST);
+			}
 
 			if (null != publicKey) {
 				logger.debug("Public key not null");
 				
-				Resource res = cryptoInterface.encrypt(publicKey, parsePolicy(form.getPolicy()), form.getFileData());
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				
-				logger.debug("Inserting");
-				ResourceID rid = repository.storeResource(form.getUid(), form.getFileName(), res);  
-				
-				logger.debug("Inserted resource id: " + rid.getID());
-				
-				if (null != rid) {
-					Iterator<String> friends = database.getUserFriends(form.getUid());
-					
-					while (friends.hasNext()) {
-						keyGeneration.generate(form.getUid(), friends.next(), parsePolicy(form.getPolicy()));
+				try {
+					int readBytes = -1;
+					byte[] buffer = new byte[1<<10];
+							
+					while (-1 != (readBytes = filedata.read(buffer))) {
+						baos.write(buffer, 0, readBytes);
 					}
+				} catch (IOException e) {
+					logger.error("Error reading the uploaded file");
+					throw new WebApplicationException(Status.INTERNAL_SERVER_ERROR);
 				}
-			} else {
-				//throw new WebApplicationException();
-			}
-		} else {
-			//throw new WebApplicationException();
-		}
-	}
-	
-	/*public void publishResource(@Context HttpServletRequest req) throws Exception {
-
-		FileItemFactory factory = new DiskFileItemFactory();
-		ServletFileUpload upload = new ServletFileUpload(factory);
-
-		@SuppressWarnings("unchecked")
-		List<FileItem> items = (List<FileItem>) upload.parseRequest(req);
-
-		String name = null;
-		ByteArrayOutputStream resource = new ByteArrayOutputStream();
-
-		String uid = null;
-		int[] policy = {1,1,1,1,1,1,1,1,1,1,
-				1,1,1,1,1,1,1,1,1,1,
-				1,1,1,1,1,1,1,1,1,1}; // TMCH && for debug
-
-		for (FileItem item : items) {
-			if (item.isFormField()) {
-				if (item.getFieldName().equals("uid")) {
-					// get user id
-					uid = item.getString();
-				} else if (item.getFieldName().equals("policy")) {
-					policy = parsePolicy(item.getString());
-				}
-			} else {
-				int c;
-				InputStream is = item.getInputStream();
-
-				while (-1 != (c = is.read())) {
-					resource.write((byte) c);
-				}
-
-				name = item.getName();
-			}
-		}
-
-		if (uid != null) {
-			logger.debug("Retrieving public key");
-			
-			CipherParameters publicKey = database.getPublicKey(uid);
-
-			if (null != publicKey) {
-				logger.debug("Public key not null");
 				
-				Resource res = cryptoInterface.encrypt(publicKey, policy, resource.toByteArray());
+				Resource res = cryptoInterface.encrypt(publicKey, parsePolicy(policy), baos.toByteArray());
 				
 				logger.debug("Inserting");
-				ResourceID rid = repository.storeResource(uid, name, res);  
+				ResourceID rid = repository.storeResource(uid, filename, res);  
 				
 				logger.debug("Inserted resource id: " + rid.getID());
 				
@@ -263,16 +236,16 @@ public class CryptoSocial {
 					Iterator<String> friends = database.getUserFriends(uid);
 					
 					while (friends.hasNext()) {
-						keyGeneration.generate(uid,	friends.next(), policy);
+						keyGeneration.generate(uid, friends.next(), parsePolicy(policy));
 					}
 				}
 			} else {
-				throw new WebApplicationException();
+				throw new WebApplicationException(Status.BAD_REQUEST);
 			}
 		} else {
-			throw new WebApplicationException();
+			throw new WebApplicationException(Status.BAD_REQUEST);
 		}
-	}*/
+	}
 	
 	private int[] parsePolicy(String string) {
 		int[] policy = new int[properties.getLength()];

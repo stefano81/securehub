@@ -22,6 +22,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.bouncycastle.crypto.CipherParameters;
 
+import com.restfb.DefaultFacebookClient;
+import com.restfb.FacebookClient;
+import com.restfb.types.User;
+
 public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 	private static MySQLDatabase database;
 	private static Logger logger = Logger.getLogger(MySQLDatabase.class);
@@ -84,7 +88,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 					ResultSet resourceID = insertResourceStatement.getGeneratedKeys();
 				
 					if (resourceID.next()) {
-						rid = new ResourceID(name, resourceID.getInt("id"));
+						rid = new ResourceID(name, resourceID.getLong("id"));
 					} else {
 						logger.error("Unable to retrieve id");
 					}
@@ -115,7 +119,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 			
 			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
 			
-			getResourceStatement.setInt(1, id.getID());
+			getResourceStatement.setLong(1, id.getID());
 			
 			ResultSet rs = getResourceStatement.executeQuery();
 			
@@ -148,7 +152,7 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 			ResultSet rs = statement.executeQuery();
 	
 			while (rs.next()) {
-				resources.add(new ResourceID(rs.getString("name"), rs.getInt("id")));
+				resources.add(new ResourceID(rs.getString("name"), rs.getLong("id")));
 			}
 		} catch (ConnectionPoolException e) {
 			// TODO
@@ -488,8 +492,6 @@ public class MySQLDatabase implements ServerDatabase, ClientDatabase {
 		logger.debug("Adding user data for " + uid);
 		
 		/*FacebookClient fbClient = new DefaultFacebookClient(getAccessToken(uid));
-		User userData = fbClient.fetchObject("me", User.class);
-		*/
-		// TODO
+		User userData = fbClient.fetchObject("me", User.class);*/	
 	}
 }

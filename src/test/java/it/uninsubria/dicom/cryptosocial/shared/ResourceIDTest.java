@@ -9,7 +9,7 @@ import org.junit.Test;
 
 public class ResourceIDTest {
 	private static final String RESOURCENAME = "RESOURCENAME";
-	private static final Integer ID = new Integer(111111111);
+	private static final Long ID = new Long(111111111);
 	
 	ResourceID rid;
 

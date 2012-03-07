@@ -88,7 +88,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 					ResultSet resourceID = insertResourceStatement.getGeneratedKeys();
 				
 					if (resourceID.next()) {
-						rid = new ResourceID(name, resourceID.getInt("id"));
+						rid = new ResourceID(name, resourceID.getLong("id"));
 					} else {
 						logger.error("Unable to retrieve id");
 					}
@@ -119,7 +119,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			
 			PreparedStatement getResourceStatement = connection.prepareStatement(getResourceQuery);
 			
-			getResourceStatement.setInt(1, id.getID());
+			getResourceStatement.setLong(1, id.getID());
 			
 			ResultSet rs = getResourceStatement.executeQuery();
 			
@@ -152,7 +152,7 @@ public class PostgresDatabase implements ServerDatabase, ClientDatabase {
 			ResultSet rs = statement.executeQuery();
 	
 			while (rs.next()) {
-				resources.add(new ResourceID(rs.getString("name"), rs.getInt("id")));
+				resources.add(new ResourceID(rs.getString("name"), rs.getLong("id")));
 			}
 		} catch (ConnectionPoolException e) {
 			// TODO

@@ -1,6 +1,5 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
-import junit.framework.TestCase;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -8,11 +7,17 @@ import java.io.*;
 import java.security.Security;
 import java.util.Arrays;
 
+import org.junit.*;
+
+import static org.junit.Assert.*;
+
+
 /**
  * @author Angelo De Caro (angelo.decaro@gmail.com)
  */
-public class Test extends TestCase {
+public class TestDeCaro {
 
+	@Test
     public void testFull() {
         try {
             Security.addProvider(new BouncyCastleProvider());

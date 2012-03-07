@@ -1,20 +1,11 @@
 package it.uninsubria.dicom.cryptosocial.shared;
 
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08MasterSecretKeyParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08Parameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.hve.ip08.params.HVEIP08SecretKeyParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.AHIBEDIP10MasterSecretKeyParameters;
-import it.unisa.dia.gas.crypto.jpbc.fe.ibe.dip10.params.AHIBEDIP10SecretKeyParameters;
-import it.unisa.dia.gas.jpbc.CurveParameters;
-import it.unisa.dia.gas.jpbc.Element;
-//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput;
-//import it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectOutput;
-import org.bouncycastle.crypto.CipherParameters;
-
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+
+import org.bouncycastle.crypto.CipherParameters;
 
 //import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.G1;
 //import static it.unisa.dia.gas.plaf.jpbc.util.io.ElementObjectInput.FieldType.Zr;

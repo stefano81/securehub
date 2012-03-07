@@ -2,14 +2,14 @@ package it.uninsubria.dicom.cryptosocial.shared;
 
 public class ResourceID {
 	private String	name;
-	private Integer	id;
+	private Long	id;
 
-	public ResourceID(String name, Integer id) {
+	public ResourceID(String name, Long l) {
 		this.name = name;
-		this.id = id;
+		this.id = l;
 	}
 	
-	public ResourceID(Integer id) {
+	public ResourceID(Long id) {
 		this(null, id);
 	}
 
@@ -21,7 +21,7 @@ public class ResourceID {
 		return this.name;
 	}
 	
-	public Integer getID() {
+	public Long getID() {
 		return this.id;
 	}
 }
