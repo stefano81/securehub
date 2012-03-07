@@ -3,7 +3,6 @@ package it.uninsubria.dicom.cryptosocial.client;
 import it.uninsubria.dicom.cryptosocial.shared.CryptoInterface;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
