@@ -6,30 +6,27 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
   </head>
   <body>
-  	<div>
-  		<button 
-  	</div>
     <div id="fb-root"></div>
     <script src="https://connect.facebook.net/en_US/all.js"></script>
     <script>
       // initialize the library with the API key
       FB.init({
-      	apiKey: '106571229431832',
-      	status: true,
-      	cookies: true,
-      	xfbml: true
-      	});
+        apiKey: '106571229431832',
+        status: true,
+        cookies: true,
+        xfbml: true
+      });
 
       // fetch the status on load
       FB.getLoginStatus(handleSessionResponse);
 
-	  
+
 
       $('#login').bind('click', function() {
         FB.login(function(response) {
-        	if (response.session) {
-        		
-        	}
+          if (response.session) {
+
+          }
         }, {perms:'read_stream,publish_stream,offline_access'});
       });
 
@@ -55,10 +52,9 @@
           clearDisplay();
           return;
         }
-        );
       }
     </script>
-    
-    
+
+
   </body>
 </html>
